@@ -73,22 +73,22 @@ class GSSTrainer(Trainer):
 
         rgb = self.data['rgb'][ind].detach().cpu().numpy()
         out = self.gaussRender(pc=self.model, camera=camera)
-        rgb_pd = out['render'].detach().cpu().numpy()[..., :3]
+        rgb_pd = out['latent'].detach().cpu().numpy()[..., :3]
         depth_pd = out['depth'].detach().cpu().numpy()[..., 0]
         depth = self.data['depth'][ind].detach().cpu().numpy()
         # if the shape does not match, resize the depth_pd
         if depth.shape != depth_pd.shape:
-            depth_pd = cv2.resize(depth_pd, depth.shape)
+            depth_pd = cv2.resize(depth_pd, (depth.shape[1], depth.shape[0]))
         depth = np.concatenate([depth, depth_pd], axis=1)
         depth = (1 - depth / depth.max())
         depth = plt.get_cmap('jet')(depth)[..., :3]
         if rgb.shape != rgb_pd.shape:
-            rgb_pd = cv2.resize(rgb_pd, rgb.shape)
+            rgb_pd = cv2.resize(rgb_pd, (rgb.shape[1], rgb.shape[0]))
         image = np.concatenate([rgb, rgb_pd], axis=1)
         image = np.concatenate([image, depth], axis=0)
         utils.imwrite(str(self.results_folder / f'image-{self.step}.png'), image)
         rgb_pdnp = out['render'].detach().cpu().numpy()
-        rgb_pdnp = rgb_pdnp.permute(1,2,0)
+        # rgb_pdnp is already in numpy format, no need for permute
         np.save(str(self.results_folder / f'image-{self.step}.npy'), rgb_pdnp)
 
 
