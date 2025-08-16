@@ -94,7 +94,7 @@ def main():
         # Decode
         print(f"Decoding {lat_path} -> {out_img}")
         print("latent shape:", lat.shape)
-        lat = einops.rearrange(lat, "b h w c -> b c h w")  # (1, h, w, 4)
+        # lat = einops.rearrange(lat, "b h w c -> b c h w")  # (1, h, w, 4)
         img_tensor = decode_latents(vae, lat)   # (1,3, 8*h, 8*w)
         img = tensor_to_pil(img_tensor)
         img.save(out_img)
