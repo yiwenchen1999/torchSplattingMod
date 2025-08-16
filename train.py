@@ -64,7 +64,7 @@ class GSSTrainer(Trainer):
 
         rgb = self.data['rgb'][ind].detach().cpu().numpy()
         out = self.gaussRender(pc=self.model, camera=camera)
-        rgb_pd = out['render'].detach().cpu().numpy()
+        rgb_pd = out['render'].detach().cpu().numpy()[..., :3]
         depth_pd = out['depth'].detach().cpu().numpy()[..., 0]
         depth = self.data['depth'][ind].detach().cpu().numpy()
         depth = np.concatenate([depth, depth_pd], axis=1)
@@ -73,6 +73,8 @@ class GSSTrainer(Trainer):
         image = np.concatenate([rgb, rgb_pd], axis=1)
         image = np.concatenate([image, depth], axis=0)
         utils.imwrite(str(self.results_folder / f'image-{self.step}.png'), image)
+        rgb_pdnp = out['render'].detach().cpu().numpy()
+        np.save(str(self.results_folder / f'image-{self.step}.npy'), rgb_pdnp)
 
 
 if __name__ == "__main__":
