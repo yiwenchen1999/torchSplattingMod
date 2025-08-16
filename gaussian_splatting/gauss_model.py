@@ -64,7 +64,7 @@ class GaussModel(nn.Module):
 
         print("Number of points at initialisation : ", fused_point_cloud.shape[0])
 
-        features = torch.zeros((fused_color.shape[0], 3, (self.max_sh_degree + 1) ** 2)).float().cuda()
+        features = torch.zeros((fused_color.shape[0], 4, (self.max_sh_degree + 1) ** 2)).float().cuda()
         features[:, :3, 0 ] = fused_color
         features[:, 3:, 1:] = 0.0
 

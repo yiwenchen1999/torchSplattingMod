@@ -30,6 +30,7 @@ class GSSTrainer(Trainer):
         rgb = self.data['rgb'][ind]
         depth = self.data['depth'][ind]
         mask = (self.data['alpha'][ind] > 0.5)
+        latent = self.data['latent'][ind]
         if USE_GPU_PYTORCH:
             camera = to_viewpoint_camera(camera)
 
@@ -39,19 +40,24 @@ class GSSTrainer(Trainer):
             prof = contextlib.nullcontext()
 
         with prof:
+            camera.image_width = 64
+            camera.image_height = 64
             out = self.gaussRender(pc=self.model, camera=camera)
 
         if USE_PROFILE:
             print(prof.key_averages(group_by_stack_n=True).table(sort_by='self_cuda_time_total', row_limit=20))
 
 
-        l1_loss = loss_utils.l1_loss(out['render'], rgb)
-        depth_loss = loss_utils.l1_loss(out['depth'][..., 0][mask], depth[mask])
-        ssim_loss = 1.0-loss_utils.ssim(out['render'], rgb)
+        #^ l1_loss = loss_utils.l1_loss(out['render'], rgb)
+        #^ depth_loss = loss_utils.l1_loss(out['depth'][..., 0][mask], depth[mask])
+        #^ ssim_loss = 1.0-loss_utils.ssim(out['render'], rgb)
+        l1_loss = loss_utils.l1_loss(out['render'], latent)
 
-        total_loss = (1-self.lambda_dssim) * l1_loss + self.lambda_dssim * ssim_loss + depth_loss * self.lambda_depth
-        psnr = utils.img2psnr(out['render'], rgb)
-        log_dict = {'total': total_loss,'l1':l1_loss, 'ssim': ssim_loss, 'depth': depth_loss, 'psnr': psnr}
+        #^ total_loss = (1-self.lambda_dssim) * l1_loss + self.lambda_dssim * ssim_loss + depth_loss * self.lambda_depth
+        #^ psnr = utils.img2psnr(out['render'], rgb)
+        #^ log_dict = {'total': total_loss,'l1':l1_loss, 'ssim': ssim_loss, 'depth': depth_loss, 'psnr': psnr}
+        total_loss = l1_loss
+        log_dict = {'total': total_loss,'l1':l1_loss}
 
         return total_loss, log_dict
 
@@ -61,6 +67,8 @@ class GSSTrainer(Trainer):
         camera = self.data['camera'][ind]
         if USE_GPU_PYTORCH:
             camera = to_viewpoint_camera(camera)
+        camera.image_width = 64
+        camera.image_height = 64
 
         rgb = self.data['rgb'][ind].detach().cpu().numpy()
         out = self.gaussRender(pc=self.model, camera=camera)
