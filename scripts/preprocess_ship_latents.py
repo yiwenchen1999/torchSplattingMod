@@ -145,7 +145,7 @@ def process_transforms_file(transforms_path, test_dir, output_dir):
 
 def main():
     parser = argparse.ArgumentParser(description='Preprocess ship_latents for torchSplattingMod')
-    parser.add_argument('--ship_latents_dir', type=str, default='../ship_latents',
+    parser.add_argument('--ship_latents_dir', type=str, default='../../ship_latents',
                        help='Path to ship_latents directory')
     parser.add_argument('--output_dir', type=str, default='../ship_latents_processed',
                        help='Output directory for processed data')
