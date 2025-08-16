@@ -88,7 +88,8 @@ class GSSTrainer(Trainer):
         image = np.concatenate([image, depth], axis=0)
         utils.imwrite(str(self.results_folder / f'image-{self.step}.png'), image)
         rgb_pdnp = out['render'].detach().cpu().numpy()
-        # rgb_pdnp is already in numpy format, no need for permute
+        # Rearrange from (H,W,C) to (C,H,W)
+        rgb_pdnp = np.transpose(rgb_pdnp, (2, 0, 1))
         np.save(str(self.results_folder / f'image-{self.step}.npy'), rgb_pdnp)
 
 
