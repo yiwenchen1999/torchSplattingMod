@@ -57,8 +57,9 @@ class GSSTrainer(Trainer):
         #^ total_loss = (1-self.lambda_dssim) * l1_loss + self.lambda_dssim * ssim_loss + depth_loss * self.lambda_depth
         #^ psnr = utils.img2psnr(out['render'], rgb)
         #^ log_dict = {'total': total_loss,'l1':l1_loss, 'ssim': ssim_loss, 'depth': depth_loss, 'psnr': psnr}
+        psnr = utils.img2psnr(out['render'], latent)
         total_loss = l1_loss
-        log_dict = {'total': total_loss,'l1':l1_loss}
+        log_dict = {'total': total_loss,'l1':l1_loss, 'psnr': psnr}
 
         return total_loss, log_dict
 
