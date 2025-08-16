@@ -51,7 +51,7 @@ class GSSTrainer(Trainer):
         #^ l1_loss = loss_utils.l1_loss(out['render'], rgb)
         #^ depth_loss = loss_utils.l1_loss(out['depth'][..., 0][mask], depth[mask])
         #^ ssim_loss = 1.0-loss_utils.ssim(out['render'], rgb)
-        print('out render shape', out['render'].shape, 'latent shape', latent.shape)
+        # print('out render shape', out['render'].shape, 'latent shape', latent.shape)
         l1_loss = loss_utils.l1_loss(out['render'], latent)
 
         #^ total_loss = (1-self.lambda_dssim) * l1_loss + self.lambda_dssim * ssim_loss + depth_loss * self.lambda_depth
