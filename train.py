@@ -8,7 +8,7 @@ from gaussian_splatting.utils.camera_utils import to_viewpoint_camera
 from gaussian_splatting.utils.point_utils import get_point_clouds
 from gaussian_splatting.gauss_model import GaussModel
 from gaussian_splatting.gauss_render import GaussRenderer
-
+import cv2
 import contextlib
 
 from torch.profiler import profile, ProfilerActivity
@@ -76,9 +76,14 @@ class GSSTrainer(Trainer):
         rgb_pd = out['render'].detach().cpu().numpy()[..., :3]
         depth_pd = out['depth'].detach().cpu().numpy()[..., 0]
         depth = self.data['depth'][ind].detach().cpu().numpy()
+        # if the shape does not match, resize the depth_pd
+        if depth.shape != depth_pd.shape:
+            depth_pd = cv2.resize(depth_pd, depth.shape)
         depth = np.concatenate([depth, depth_pd], axis=1)
         depth = (1 - depth / depth.max())
         depth = plt.get_cmap('jet')(depth)[..., :3]
+        if rgb.shape != rgb_pd.shape:
+            rgb_pd = cv2.resize(rgb_pd, rgb.shape)
         image = np.concatenate([rgb, rgb_pd], axis=1)
         image = np.concatenate([image, depth], axis=0)
         utils.imwrite(str(self.results_folder / f'image-{self.step}.png'), image)
