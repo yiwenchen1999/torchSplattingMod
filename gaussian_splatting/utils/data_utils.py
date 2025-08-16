@@ -51,6 +51,7 @@ def read_all(folder, resize_factor=1.):
         latent_file = src_rgb_file.replace('B075X65R3X','B075X65R3X/vae_latents')
         latent_file = latent_file.replace('png','npy')
         src_latent = torch.from_numpy(np.load(latent_file))
+        src_latent = src_latent.permute(2,0,1)
 
         src_rgbs.append(src_rgb)
         src_depths.append(src_depth)
