@@ -92,7 +92,12 @@ def read_image(rgb_file, pose, intrinsic_, max_depth, resize_factor=1., white_bk
             ).permute(0, 2, 3, 1)
         
         rgb = rearrange(resize_fn(rearrange(rgb, 'h w c -> 1 h w c'), resize_factor), '1 h w c -> h w c')
+            
+        if len(depth.shape) == 3:
+            depth = depth[:, :, 0]
         depth = rearrange(resize_fn(rearrange(depth, 'h w -> 1 h w 1'), resize_factor), '1 h w 1 -> h w')
+        if len(alpha.shape) == 3:
+            alpha = alpha[:, :, 0]
         alpha = rearrange(resize_fn(rearrange(alpha, 'h w -> 1 h w 1'), resize_factor), '1 h w 1 -> h w')
 
     camera = torch.from_numpy(np.concatenate(
