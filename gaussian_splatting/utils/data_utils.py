@@ -77,8 +77,12 @@ def read_all(folder, resize_factor=1.):
 
 def read_image(rgb_file, pose, intrinsic_, max_depth, resize_factor=1., white_bkgd=True):
     rgb = torch.from_numpy(imageio.imread(rgb_file).astype(np.float32) / 255.0)
-    depth = torch.from_numpy(imageio.imread(rgb_file[:-7]+'depth.png').astype(np.float32) / 255.0 * max_depth)
-    alpha = torch.from_numpy(imageio.imread(rgb_file[:-7]+'alpha.png').astype(np.float32) / 255.0)
+    # depth = torch.from_numpy(imageio.imread(rgb_file[:-7]+'depth.png').astype(np.float32) / 255.0 * max_depth)
+    # alpha = torch.from_numpy(imageio.imread(rgb_file[:-7]+'alpha.png').astype(np.float32) / 255.0)
+    depth = torch.from_numpy(np.load(rgb_file.replace('.png','_depth_0002.png')).astype(np.float32))
+    depth = (255 - depth) / 255.0 * 6.0
+    alpha = torch.from_numpy(np.load(rgb_file.replace('.png','_alpha.png')).astype(np.float32))
+    
     
     image_size = rgb.shape[:2]
     intrinsic = np.eye(4,4)
