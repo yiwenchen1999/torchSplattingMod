@@ -48,7 +48,7 @@ def read_all(folder, resize_factor=1.):
         src_rgb , src_depth, src_alpha, src_camera = \
         read_image(src_rgb_file, src_pose, 
             intrinsic, max_depth=max_depth, resize_factor=resize_factor)
-        latent_file = src_rgb_file.replace('B075X65R3X','B075X65R3X/vae_latents')
+        latent_file = src_rgb_file.replace('ship_latents_processed','ship_latents_processed/vae_latents')
         latent_file = latent_file.replace('png','npy')
         src_latent = torch.from_numpy(np.load(latent_file))
         src_latent = src_latent.permute(1,2,0)
