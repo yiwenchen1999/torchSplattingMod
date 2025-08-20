@@ -242,6 +242,7 @@ class GaussRenderer(nn.Module):
             prof = contextlib.nullcontext
             
         with prof("projection"):
+            print('means3D', means3D.shape)
             mean_ndc, mean_view, in_mask = projection_ndc(means3D, 
                     viewmatrix=camera.world_view_transform, 
                     projmatrix=camera.projection_matrix)
