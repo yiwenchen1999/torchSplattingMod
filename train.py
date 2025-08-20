@@ -105,7 +105,7 @@ if __name__ == "__main__":
     points = get_point_clouds(data['camera'], data['depth'], data['alpha'], data['rgb'])
     raw_points = points.random_sample(2**14)
     # raw_points.write_ply(open('points.ply', 'wb'))
-    print('raw_points', raw_points.get_xyz().shape)
+    print('raw_points', raw_points.shape)
 
     gaussModel = GaussModel(sh_degree=4, debug=False)
     gaussModel.create_from_pcd(pcd=raw_points)
