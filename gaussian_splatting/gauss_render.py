@@ -249,6 +249,8 @@ class GaussRenderer(nn.Module):
             print('mean_ndc', mean_ndc.shape)
             print('mean_view', mean_view.shape)
             print('in_mask', in_mask.shape)
+            # check if in_mask is all true
+            print('in_mask', in_mask.all())
             mean_ndc = mean_ndc[in_mask]
             mean_view = mean_view[in_mask]
             depths = mean_view[:,2]
