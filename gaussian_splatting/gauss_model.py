@@ -86,6 +86,7 @@ class GaussModel(nn.Module):
         self._rotation = nn.Parameter(rots.requires_grad_(True))
         self._opacity = nn.Parameter(opacities.requires_grad_(True))
         self.max_radii2D = torch.zeros((self._xyz.shape[0]), device="cuda")
+        print('self._xyz', self._xyz.shape)
         return self
 
     @property

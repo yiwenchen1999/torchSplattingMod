@@ -132,6 +132,8 @@ def get_radius(cov2d):
 
 @torch.no_grad()
 def get_rect(pix_coord, radii, width, height):
+    print('pix_coord', pix_coord.shape)
+    print('radii', radii.shape)
     rect_min = (pix_coord - radii[:,None])
     rect_max = (pix_coord + radii[:,None])
     rect_min[..., 0] = rect_min[..., 0].clip(0, width - 1.0)
