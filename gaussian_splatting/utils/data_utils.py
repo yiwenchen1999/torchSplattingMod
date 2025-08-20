@@ -49,31 +49,31 @@ def read_all(folder, resize_factor=1.):
         src_rgb , src_depth, src_alpha, src_camera = \
         read_image(src_rgb_file, src_pose, 
             intrinsic, max_depth=max_depth, resize_factor=resize_factor)
-        # latent_file = src_rgb_file.replace('ship_latents_processed','ship_latents_processed/vae_latents')
-        # latent_file = latent_file.replace('png','npy')
-        # src_latent = torch.from_numpy(np.load(latent_file))
-        # src_latent = src_latent.permute(1,2,0)
+        latent_file = src_rgb_file.replace('ship_latents_processed','ship_latents_processed/vae_latents')
+        latent_file = latent_file.replace('png','npy')
+        src_latent = torch.from_numpy(np.load(latent_file))
+        src_latent = src_latent.permute(1,2,0)
         if i%2 == 0:
 
             src_rgbs.append(src_rgb)
             src_depths.append(src_depth)
             src_alphas.append(src_alpha)
             src_cameras.append(src_camera)
-            # src_latents.append(src_latent)
+            src_latents.append(src_latent)
         i += 1
     src_alphas = torch.stack(src_alphas, axis=0)
     src_depths = torch.stack(src_depths, axis=0)
     src_rgbs = torch.stack(src_rgbs, axis=0)
     src_cameras = torch.stack(src_cameras, axis=0)
     src_rgbs = src_alphas[..., None] * src_rgbs + (1-src_alphas)[..., None]
-    # src_latents = torch.stack(src_latents, axis=0)
+    src_latents = torch.stack(src_latents, axis=0)
 
     return {
         "rgb": src_rgbs[..., :3],
         "camera": src_cameras,
         "depth": src_depths,
         "alpha": src_alphas,
-        # "latent": src_latents,
+        "latent": src_latents,
     }
 
 
