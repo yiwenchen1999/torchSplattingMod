@@ -245,6 +245,9 @@ class GaussRenderer(nn.Module):
             mean_ndc, mean_view, in_mask = projection_ndc(means3D, 
                     viewmatrix=camera.world_view_transform, 
                     projmatrix=camera.projection_matrix)
+            print('mean_ndc', mean_ndc.shape)
+            print('mean_view', mean_view.shape)
+            print('in_mask', in_mask.shape)
             mean_ndc = mean_ndc[in_mask]
             mean_view = mean_view[in_mask]
             depths = mean_view[:,2]
