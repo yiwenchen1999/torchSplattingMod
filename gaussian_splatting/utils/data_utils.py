@@ -53,13 +53,11 @@ def read_all(folder, resize_factor=1.):
         latent_file = latent_file.replace('png','npy')
         src_latent = torch.from_numpy(np.load(latent_file))
         src_latent = src_latent.permute(1,2,0)
-        if i%2 == 0:
-
-            src_rgbs.append(src_rgb)
-            src_depths.append(src_depth)
-            src_alphas.append(src_alpha)
-            src_cameras.append(src_camera)
-            src_latents.append(src_latent)
+        src_rgbs.append(src_rgb)
+        src_depths.append(src_depth)
+        src_alphas.append(src_alpha)
+        src_cameras.append(src_camera)
+        src_latents.append(src_latent)
         i += 1
     src_alphas = torch.stack(src_alphas, axis=0)
     src_depths = torch.stack(src_depths, axis=0)
