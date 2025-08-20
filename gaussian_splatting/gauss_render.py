@@ -132,8 +132,8 @@ def get_radius(cov2d):
 
 @torch.no_grad()
 def get_rect(pix_coord, radii, width, height):
-    print('pix_coord', pix_coord.shape)
-    print('radii', radii.shape)
+    # print('pix_coord', pix_coord.shape)
+    # print('radii', radii.shape)
     rect_min = (pix_coord - radii[:,None])
     rect_max = (pix_coord + radii[:,None])
     rect_min[..., 0] = rect_min[..., 0].clip(0, width - 1.0)
@@ -176,8 +176,8 @@ class GaussRenderer(nn.Module):
         camera.image_width = 64
         camera.image_height = 64
         radii = get_radius(cov2d)
-        print('radii', radii.shape)
-        print('means2D', means2D.shape)
+        # print('radii', radii.shape)
+        # print('means2D', means2D.shape)
         rect = get_rect(means2D, radii, width=camera.image_width, height=camera.image_height)
         
         self.render_color = torch.ones(*self.pix_coord.shape[:2], 4).to('cuda')
@@ -242,17 +242,17 @@ class GaussRenderer(nn.Module):
             prof = contextlib.nullcontext
             
         with prof("projection"):
-            print('means3D', means3D.shape)
+            # print('means3D', means3D.shape)
             mean_ndc, mean_view, in_mask = projection_ndc(means3D, 
                     viewmatrix=camera.world_view_transform, 
                     projmatrix=camera.projection_matrix)
-            print('mean_ndc', mean_ndc.shape)
-            print('mean_view', mean_view.shape)
-            print('in_mask', in_mask.shape)
-            # check if in_mask is all true
-            print('in_mask', in_mask.all())
-            mean_ndc = mean_ndc[in_mask]
-            mean_view = mean_view[in_mask]
+            # print('mean_ndc', mean_ndc.shape)
+            # print('mean_view', mean_view.shape)
+            # print('in_mask', in_mask.shape)
+            # # check if in_mask is all true
+            # print('in_mask', in_mask.all())
+            #^ mean_ndc = mean_ndc[in_mask]
+            #^ mean_view = mean_view[in_mask]
             depths = mean_view[:,2]
         
         with prof("build color"):
@@ -273,8 +273,8 @@ class GaussRenderer(nn.Module):
 
             mean_coord_x = ((mean_ndc[..., 0] + 1) * camera.image_width - 1.0) * 0.5
             mean_coord_y = ((mean_ndc[..., 1] + 1) * camera.image_height - 1.0) * 0.5
-            print('mean_coord_x', mean_coord_x.shape)
-            print('mean_coord_y', mean_coord_y.shape)
+            # print('mean_coord_x', mean_coord_x.shape)
+            # print('mean_coord_y', mean_coord_y.shape)
             means2D = torch.stack([mean_coord_x, mean_coord_y], dim=-1)
         
         with prof("render"):
