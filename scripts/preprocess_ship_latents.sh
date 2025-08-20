@@ -19,8 +19,8 @@
 
 # Run the preprocessing script
 python preprocess_ship_latents.py \
-    --ship_latents_dir ../../nerf_synthetic/ship_latents \
-    --output_dir ../../nerf_synthetic/ship_latents_processed \
+    --ship_latents_dir ../../ship_latents \
+    --output_dir ../../ship_latents_processed \
     --transforms_file transforms_test.json
 
 echo "Preprocessing completed!"
