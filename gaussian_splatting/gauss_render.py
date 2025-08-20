@@ -176,6 +176,8 @@ class GaussRenderer(nn.Module):
         camera.image_width = 64
         camera.image_height = 64
         radii = get_radius(cov2d)
+        print('radii', radii.shape)
+        print('means2D', means2D.shape)
         rect = get_rect(means2D, radii, width=camera.image_width, height=camera.image_height)
         
         self.render_color = torch.ones(*self.pix_coord.shape[:2], 4).to('cuda')
@@ -265,6 +267,8 @@ class GaussRenderer(nn.Module):
 
             mean_coord_x = ((mean_ndc[..., 0] + 1) * camera.image_width - 1.0) * 0.5
             mean_coord_y = ((mean_ndc[..., 1] + 1) * camera.image_height - 1.0) * 0.5
+            print('mean_coord_x', mean_coord_x.shape)
+            print('mean_coord_y', mean_coord_y.shape)
             means2D = torch.stack([mean_coord_x, mean_coord_y], dim=-1)
         
         with prof("render"):
