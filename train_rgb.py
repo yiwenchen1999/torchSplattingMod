@@ -80,7 +80,6 @@ class GSSTrainer(Trainer):
             # Get other gaussian parameters if available
             features = None
             if hasattr(self.model, '_features_dc') and self.model._features_dc is not None:
-                print('features_dc', self.model._features_dc.shape)
                 features = self.model._features_dc.detach().cpu().numpy()
             
             # Create a simple point cloud with xyz coordinates
@@ -105,6 +104,8 @@ class GSSTrainer(Trainer):
         Save xyz coordinates as PLY file for visualization
         """
         if True:
+            if features is not None:
+                features = features[:, 0, :]
             # Create PLY header
             num_points = len(xyz)
             ply_header = f"""ply
@@ -137,7 +138,7 @@ class GSSTrainer(Trainer):
                     # Add colors if features are available
                     if features is not None and len(features.shape) >= 2:
                         # Convert features to RGB (assuming first 3 components)
-                        print('features', features.shape)
+                        
                         if features.shape[1] >= 3:
                             r = int(max(0, min(255, features[i, 0] * 255)))
                             g = int(max(0, min(255, features[i, 1] * 255)))
