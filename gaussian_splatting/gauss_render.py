@@ -195,7 +195,7 @@ class GaussRenderer(nn.Module):
                 over_br = rect[1][..., 0].clip(max=w+TILE_SIZE-1), rect[1][..., 1].clip(max=h+TILE_SIZE-1)
                 in_mask = (over_br[0] > over_tl[0]) & (over_br[1] > over_tl[1]) # 3D gaussian in the tile 
                 
-                print("in_mask", in_mask.shape)
+                print("in_mask", in_mask.sum())
                 if not in_mask.sum() > 0:
                     continue
 
