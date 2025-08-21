@@ -73,7 +73,7 @@ class GSSTrainer(Trainer):
         """
         Save the gaussian model's _xyz as a point cloud
         """
-        try:
+        if True:
             # Get the xyz coordinates from the gaussian model
             xyz = self.model._xyz.detach().cpu().numpy()
             
@@ -96,8 +96,8 @@ class GSSTrainer(Trainer):
             
             print(f"Saved gaussian xyz point cloud at step {step}")
             
-        except Exception as e:
-            print(f"Error saving gaussian xyz point cloud: {e}")
+        # except Exception as e:
+        #     print(f"Error saving gaussian xyz point cloud: {e}")
     
     def save_xyz_as_ply(self, xyz, features=None, step=None):
         """
