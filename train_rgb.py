@@ -195,8 +195,8 @@ if __name__ == "__main__":
     device = 'cuda'
     folder = '../nerf_synthetic/ship_latents_processed'
     scene_name = 'ship_rgb'
-    folder = 'B075X65R3X'
-    scene_name = 'chair_rgb'
+    # folder = 'B075X65R3X'
+    # scene_name = 'chair_rgb'
     latent_model = False
     data = read_all(folder, resize_factor=0.5)
     data = {k: v.to(device) for k, v in data.items()}
