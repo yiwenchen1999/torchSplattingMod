@@ -43,6 +43,7 @@ def read_all(folder, resize_factor=1.):
     src_rgbs = []
     src_alphas = []
     src_depths = []
+    i = 0
     for src_rgb_file, src_pose, intrinsic in zip(src_rgb_files, src_poses, src_intrinsics):
         src_rgb , src_depth, src_alpha, src_camera = \
         read_image(src_rgb_file, src_pose, 
@@ -52,6 +53,7 @@ def read_all(folder, resize_factor=1.):
         src_depths.append(src_depth)
         src_alphas.append(src_alpha)
         src_cameras.append(src_camera)
+        i += 1
     
     src_alphas = torch.stack(src_alphas, axis=0)
     src_depths = torch.stack(src_depths, axis=0)

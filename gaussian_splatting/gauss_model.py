@@ -40,7 +40,7 @@ class GaussModel(nn.Module):
 
         self.rotation_activation = torch.nn.functional.normalize
     
-    def __init__(self, sh_degree : int=3, debug=False):
+    def __init__(self, sh_degree : int=3, debug=False, latent_model=False):
         super(GaussModel, self).__init__()
         self.max_sh_degree = sh_degree  
         self._xyz = torch.empty(0)
@@ -51,6 +51,7 @@ class GaussModel(nn.Module):
         self._opacity = torch.empty(0)
         self.setup_functions()
         self.debug = debug
+        self.latent_model = latent_model
 
     def create_from_pcd(self, pcd:PointCloud):
         """
@@ -63,10 +64,13 @@ class GaussModel(nn.Module):
         fused_color = RGB2SH(torch.tensor(np.asarray(colors)).float().cuda())
 
         print("Number of points at initialisation : ", fused_point_cloud.shape[0])
-
-        features = torch.zeros((fused_color.shape[0], 4, (self.max_sh_degree + 1) ** 2)).float().cuda()
-        features[:, :3, 0 ] = fused_color
-        features[:, 3:, 1:] = 0.0
+        if self.latent_model:
+            features = torch.zeros((fused_color.shape[0], 4, (self.max_sh_degree + 1) ** 2)).float().cuda()
+            features[:, :3, 0 ] = fused_color
+            features[:, 3:, 1:] = 0.0
+        else:
+            features = torch.zeros((fused_color.shape[0], 3, (self.max_sh_degree + 1) ** 2)).float().cuda()
+            features[:, :3, 0 ] = fused_color
 
         dist2 = torch.clamp_min(distCUDA2(torch.from_numpy(np.asarray(points)).float().cuda()), 0.0000001)
         scales = torch.log(torch.sqrt(dist2))[...,None].repeat(1, 3)

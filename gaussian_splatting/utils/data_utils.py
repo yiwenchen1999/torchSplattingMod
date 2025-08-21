@@ -32,7 +32,7 @@ def read_camera(folder):
         intrinsics.append(np.array(item['intrinsic']))
     return rgb_files, poses, intrinsics, max_depth
 
-def read_all(folder, resize_factor=1.):
+def read_all(folder, resize_factor=1., latent_model=False):
     """
     read source images from a folder
     """
@@ -51,27 +51,31 @@ def read_all(folder, resize_factor=1.):
             intrinsic, max_depth=max_depth, resize_factor=resize_factor)
         latent_file = src_rgb_file.replace('ship_latents_processed','ship_latents_processed/vae_latents')
         latent_file = latent_file.replace('png','npy')
-        src_latent = torch.from_numpy(np.load(latent_file))
-        src_latent = src_latent.permute(1,2,0)
-        src_rgbs.append(src_rgb)
-        src_depths.append(src_depth)
-        src_alphas.append(src_alpha)
-        src_cameras.append(src_camera)
-        src_latents.append(src_latent)
+        if latent_model:
+            src_latent = torch.from_numpy(np.load(latent_file))
+            src_latent = src_latent.permute(1,2,0)
+        if i<1000000:
+            src_rgbs.append(src_rgb)
+            src_depths.append(src_depth)
+            src_alphas.append(src_alpha)
+            src_cameras.append(src_camera)
+            if latent_model:
+                src_latents.append(src_latent)
         i += 1
     src_alphas = torch.stack(src_alphas, axis=0)
     src_depths = torch.stack(src_depths, axis=0)
     src_rgbs = torch.stack(src_rgbs, axis=0)
     src_cameras = torch.stack(src_cameras, axis=0)
     src_rgbs = src_alphas[..., None] * src_rgbs + (1-src_alphas)[..., None]
-    src_latents = torch.stack(src_latents, axis=0)
+    if latent_model:
+        src_latents = torch.stack(src_latents, axis=0)
 
     return {
         "rgb": src_rgbs[..., :3],
         "camera": src_cameras,
         "depth": src_depths,
         "alpha": src_alphas,
-        "latent": src_latents,
+        # "latent": src_latents,
     }
 
 
@@ -82,9 +86,13 @@ def read_image(rgb_file, pose, intrinsic_, max_depth, resize_factor=1, white_bkg
     depth = torch.from_numpy(imageio.imread(rgb_file.replace('.png','_depth_0002.png')).astype(np.float32))
     # print(depth[400,400])
     depth = (255 - depth) / 255.0 * 8.0
+    if len(depth.shape) == 3:
+        depth = depth[:, :, 0]
+
     # depth = depth / 255.0 * 5.0
     # print(depth.shape)
-    alpha = torch.from_numpy(imageio.imread(rgb_file.replace('.png','_alpha.png')).astype(np.float32)) / 255.0
+    alpha = torch.from_numpy(imageio.imread(rgb_file.replace('.png','_alpha.png')).astype(np.float32))
+    print("alpha range", alpha.min(), alpha.max())
     
     
     image_size = rgb.shape[:2]
@@ -93,7 +101,7 @@ def read_image(rgb_file, pose, intrinsic_, max_depth, resize_factor=1, white_bkg
 
     if resize_factor != 1:
         image_size = image_size[0] * resize_factor, image_size[1] * resize_factor 
-        intrinsic[:2,:3] *= 0.5
+        intrinsic[:2,:3] *= resize_factor
         resize_fn = lambda img, resize_factor: F.interpolate(
                 img.permute(0, 3, 1, 2), scale_factor=resize_factor, mode='bilinear',
             ).permute(0, 2, 3, 1)

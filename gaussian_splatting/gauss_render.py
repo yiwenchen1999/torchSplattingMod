@@ -172,15 +172,16 @@ class GaussRenderer(nn.Module):
         #^ color = (color + 0.5).clip(min=-0.2, max=0.2)
         return color
     
-    def render(self, camera, means2D, cov2d, color, opacity, depths):
-        camera.image_width = 64
-        camera.image_height = 64
+    def render(self, camera, means2D, cov2d, color, opacity, depths, render_latents = False):
+        if render_latents:
+            camera.image_width = 64
+            camera.image_height = 64
         radii = get_radius(cov2d)
-        # print('radii', radii.shape)
-        # print('means2D', means2D.shape)
         rect = get_rect(means2D, radii, width=camera.image_width, height=camera.image_height)
-        
-        self.render_color = torch.ones(*self.pix_coord.shape[:2], 4).to('cuda')
+        if render_latents:
+            self.render_color = torch.ones(*self.pix_coord.shape[:2], 4).to('cuda')
+        else:
+            self.render_color = torch.ones(*self.pix_coord.shape[:2], 3).to('cuda')
         self.render_depth = torch.zeros(*self.pix_coord.shape[:2], 1).to('cuda')
         self.render_alpha = torch.zeros(*self.pix_coord.shape[:2], 1).to('cuda')
 

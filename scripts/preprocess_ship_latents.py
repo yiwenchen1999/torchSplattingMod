@@ -14,6 +14,43 @@ import argparse
 from pathlib import Path
 import cv2
 
+def resize_image_if_needed(image_path, target_size=(512, 512)):
+    """
+    Resize image to target size if it's not already the correct size
+    Returns the resized image as numpy array
+    """
+    try:
+        # Load image
+        img = imageio.imread(image_path)
+        
+        # Check if resizing is needed
+        if img.shape[:2] != target_size:
+            print(f"Resizing {image_path} from {img.shape[:2]} to {target_size}")
+            
+            # Use PIL for better resizing quality
+            pil_img = Image.fromarray(img)
+            pil_img_resized = pil_img.resize(target_size, Image.Resampling.LANCZOS)
+            img_resized = np.array(pil_img_resized)
+            
+            return img_resized
+        else:
+            return img
+            
+    except Exception as e:
+        print(f"Error resizing image {image_path}: {e}")
+        # Return black image as fallback
+        # Handle both grayscale and RGB images
+        if len(img.shape) == 3:
+            return np.zeros((*target_size, 3), dtype=np.uint8)
+        else:
+            return np.zeros(target_size, dtype=np.uint8)
+
+def create_black_depth_placeholder(target_size=(512, 512)):
+    """
+    Create a black depth image as placeholder
+    """
+    return np.zeros(target_size, dtype=np.uint8)
+
 def create_alpha_mask(rgb_path):
     """
     Create alpha mask from RGB image by thresholding
@@ -39,7 +76,12 @@ def create_alpha_mask(rgb_path):
     except Exception as e:
         print(f"Error creating alpha mask for {rgb_path}: {e}")
         # Return all ones as fallback
-        return np.ones((512, 512), dtype=np.float32)
+        # Use the actual image size instead of hardcoded 512
+        if os.path.exists(rgb_path):
+            img = imageio.imread(rgb_path)
+            return np.ones(img.shape[:2], dtype=np.float32)
+        else:
+            return np.ones((512, 512), dtype=np.float32)
 
 def get_depth_from_test(rgb_filename, test_dir):
     """
@@ -106,10 +148,15 @@ def process_transforms_file(transforms_path, test_dir, output_dir):
         # NeRF uses different coordinate system
         pose = np.array(transform_matrix)
         
-        # Create alpha mask
+        # Resize RGB image if needed and save to output directory
+        rgb_img_resized = resize_image_if_needed(rgb_path, (image_width, image_width))
+        dst_rgb_path = os.path.join(output_dir, rgb_filename)
+        imageio.imwrite(dst_rgb_path, rgb_img_resized)
+        
+        # Create alpha mask from resized image
         alpha_filename = rgb_filename.replace('.png', '_alpha.png')
         alpha_path = os.path.join(output_dir, alpha_filename)
-        alpha_mask = create_alpha_mask(rgb_path)
+        alpha_mask = create_alpha_mask(dst_rgb_path)  # Use the resized image
         imageio.imwrite(alpha_path, (alpha_mask * 255).astype(np.uint8))
         
         # Find depth file in the same test directory
@@ -127,19 +174,28 @@ def process_transforms_file(transforms_path, test_dir, output_dir):
         
         if depth_filename:
             image_entry["depth"] = depth_filename
-            # Copy depth file to output directory
+            # Copy and resize depth file to output directory
             src_depth_path = os.path.join(test_dir, depth_filename)
             dst_depth_path = os.path.join(output_dir, depth_filename)
             if os.path.exists(src_depth_path):
-                import shutil
-                shutil.copy2(src_depth_path, dst_depth_path)
+                # Resize depth image if needed
+                depth_img_resized = resize_image_if_needed(src_depth_path, (image_width, image_width))
+                imageio.imwrite(dst_depth_path, depth_img_resized)
+            else:
+                print(f"Warning: Depth file not found: {src_depth_path}")
+                # Create black placeholder
+                depth_placeholder = create_black_depth_placeholder((image_width, image_width))
+                imageio.imwrite(dst_depth_path, depth_placeholder)
+        else:
+            # Create black depth placeholder if no depth file found
+            depth_filename = rgb_filename.replace('.png', '_depth_placeholder.png')
+            image_entry["depth"] = depth_filename
+            depth_placeholder = create_black_depth_placeholder((image_width, image_width))
+            dst_depth_path = os.path.join(output_dir, depth_filename)
+            imageio.imwrite(dst_depth_path, depth_placeholder)
+            print(f"Created black depth placeholder: {depth_filename}")
         
         images.append(image_entry)
-        
-        # Copy RGB file to output directory
-        dst_rgb_path = os.path.join(output_dir, rgb_filename)
-        import shutil
-        shutil.copy2(rgb_path, dst_rgb_path)
     
     return images
 
@@ -186,7 +242,7 @@ def main():
         "channels": ["R", "G", "B", "A", "D"],
         "scale": 0.5,
         "images": images,
-        "bbox": [[-0.5, -0.5, -0.5], [0.5, 0.5, 0.5]]  # Default bounding box
+        "bbox": [[-3, -3, -3], [3, 3, 3]]  # Default bounding box
     }
     
     # Save info.json

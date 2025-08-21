@@ -8,7 +8,7 @@ from pathlib import Path
 # Add the current directory to Python path to import modules
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from gaussian_splatting.utils.data_utils import read_all
+from gaussian_splatting.utils.data_utils_og import read_all
 from gaussian_splatting.utils.point_utils import get_point_clouds, PointCloud
 
 def find_data_folder():
