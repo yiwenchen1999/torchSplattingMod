@@ -118,10 +118,10 @@ if __name__ == "__main__":
         train_batch_size=1, 
         train_num_steps=500000,
         i_image =100,
-        train_lr=1e-4, 
+        train_lr=1e-3, 
         amp=False,
         fp16=False,
-        results_folder='result/ship_lr1e-4',
+        results_folder='result/ship_lr1e-3',
         render_kwargs=render_kwargs,
     )
 
