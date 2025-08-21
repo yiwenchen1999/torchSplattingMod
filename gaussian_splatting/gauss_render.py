@@ -182,6 +182,7 @@ class GaussRenderer(nn.Module):
             self.render_color = torch.ones(*self.pix_coord.shape[:2], 4).to('cuda')
         else:
             self.render_color = torch.ones(*self.pix_coord.shape[:2], 3).to('cuda')
+            print("render_color", self.render_color.shape)
         self.render_depth = torch.zeros(*self.pix_coord.shape[:2], 1).to('cuda')
         self.render_alpha = torch.zeros(*self.pix_coord.shape[:2], 1).to('cuda')
 
