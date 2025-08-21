@@ -31,7 +31,8 @@ class GSSTrainer(Trainer):
         rgb = self.data['rgb'][ind]
         depth = self.data['depth'][ind]
         mask = (self.data['alpha'][ind] > 0.5)
-        latent = self.data['latent'][ind]
+        if self.latent_model:
+            latent = self.data['latent'][ind]
         if USE_GPU_PYTORCH:
             camera = to_viewpoint_camera(camera)
 
@@ -53,12 +54,16 @@ class GSSTrainer(Trainer):
         #^ depth_loss = loss_utils.l1_loss(out['depth'][..., 0][mask], depth[mask])
         #^ ssim_loss = 1.0-loss_utils.ssim(out['render'], rgb)
         # print('out render shape', out['render'].shape, 'latent shape', latent.shape)
-        l1_loss = loss_utils.l1_loss(out['render'], latent)
+        if self.latent_model:
+            gt = latent
+        else:
+            gt = rgb
+        l1_loss = loss_utils.l1_loss(out['render'], gt)
 
         #^ total_loss = (1-self.lambda_dssim) * l1_loss + self.lambda_dssim * ssim_loss + depth_loss * self.lambda_depth
         #^ psnr = utils.img2psnr(out['render'], rgb)
         #^ log_dict = {'total': total_loss,'l1':l1_loss, 'ssim': ssim_loss, 'depth': depth_loss, 'psnr': psnr}
-        psnr = utils.img2psnr(out['render'], latent)
+        psnr = utils.img2psnr(out['render'], gt)
         total_loss = l1_loss
         log_dict = {'total': total_loss,'l1':l1_loss, 'psnr': psnr}
 
