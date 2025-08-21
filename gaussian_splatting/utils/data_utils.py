@@ -5,6 +5,7 @@ import imageio
 import numpy as np
 import torch.nn.functional as F
 from einops import rearrange
+import sys
 
 # change from OpenGL/Blender camera axes (Y up, Z back) to COLMAP (Y down, Z forward)
 def read_camera(folder):
@@ -75,24 +76,27 @@ def read_all(folder, resize_factor=1., latent_model=False):
         "camera": src_cameras,
         "depth": src_depths,
         "alpha": src_alphas,
-        # "latent": src_latents,
+        "latent": src_latents if latent_model else None
     }
 
 
 def read_image(rgb_file, pose, intrinsic_, max_depth, resize_factor=1, white_bkgd=True):
     rgb = torch.from_numpy(imageio.imread(rgb_file).astype(np.float32) / 255.0)
-    # depth = torch.from_numpy(imageio.imread(rgb_file[:-7]+'depth.png').astype(np.float32) / 255.0 * max_depth)
-    # alpha = torch.from_numpy(imageio.imread(rgb_file[:-7]+'alpha.png').astype(np.float32) / 255.0)
-    depth = torch.from_numpy(imageio.imread(rgb_file.replace('.png','_depth_0002.png')).astype(np.float32))
-    # print(depth[400,400])
-    depth = (255 - depth) / 255.0 * 8.0
-    if len(depth.shape) == 3:
-        depth = depth[:, :, 0]
+    if "B075X65R3X" in rgb_file:
+        depth = torch.from_numpy(imageio.imread(rgb_file[:-7]+'depth.png').astype(np.float32) / 255.0 * max_depth)
+        alpha = torch.from_numpy(imageio.imread(rgb_file[:-7]+'alpha.png').astype(np.float32) / 255.0)
+    elif "nerf_synthetic" in rgb_file:
+        depth = torch.from_numpy(imageio.imread(rgb_file.replace('.png','_depth_0002.png')).astype(np.float32))
+        # print(depth[400,400])
+        depth = (255 - depth) / 255.0 * 8.0
+        if len(depth.shape) == 3:
+            depth = depth[:, :, 0]
+    else:
+        sys.exit("Unknown dataset")
 
-    # depth = depth / 255.0 * 5.0
-    # print(depth.shape)
-    alpha = torch.from_numpy(imageio.imread(rgb_file.replace('.png','_alpha.png')).astype(np.float32))
-    print("alpha range", alpha.min(), alpha.max())
+        # depth = depth / 255.0 * 5.0
+        # print(depth.shape)
+        alpha = torch.from_numpy(imageio.imread(rgb_file.replace('.png','_alpha.png')).astype(np.float32))
     
     
     image_size = rgb.shape[:2]
