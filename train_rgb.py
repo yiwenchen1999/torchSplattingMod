@@ -103,7 +103,7 @@ class GSSTrainer(Trainer):
         """
         Save xyz coordinates as PLY file for visualization
         """
-        try:
+        if True:
             # Create PLY header
             num_points = len(xyz)
             ply_header = f"""ply
@@ -150,8 +150,8 @@ class GSSTrainer(Trainer):
             
             print(f"Saved PLY file: {ply_path}")
             
-        except Exception as e:
-            print(f"Error saving PLY file: {e}")
+        # except Exception as e:
+        #     print(f"Error saving PLY file: {e}")
 
     def on_evaluate_step(self, **kwargs):
         import matplotlib.pyplot as plt
