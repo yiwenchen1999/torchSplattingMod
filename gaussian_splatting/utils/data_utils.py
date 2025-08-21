@@ -70,14 +70,21 @@ def read_all(folder, resize_factor=1., latent_model=False):
     src_rgbs = src_alphas[..., None] * src_rgbs + (1-src_alphas)[..., None]
     if latent_model:
         src_latents = torch.stack(src_latents, axis=0)
-
-    return {
-        "rgb": src_rgbs[..., :3],
-        "camera": src_cameras,
-        "depth": src_depths,
-        "alpha": src_alphas,
-        "latent": src_latents if latent_model else None
-    }
+    if latent_model:
+        return {
+            "rgb": src_rgbs[..., :3],
+            "camera": src_cameras,
+            "depth": src_depths,
+            "alpha": src_alphas,
+            "latent": src_latents,
+        }
+    else:
+        return {
+            "rgb": src_rgbs[..., :3],
+            "camera": src_cameras,
+            "depth": src_depths,
+            "alpha": src_alphas,
+        }
 
 
 def read_image(rgb_file, pose, intrinsic_, max_depth, resize_factor=1, white_bkgd=True):
