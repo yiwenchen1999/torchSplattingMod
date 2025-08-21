@@ -116,12 +116,12 @@ if __name__ == "__main__":
     trainer = GSSTrainer(model=gaussModel, 
         data=data,
         train_batch_size=1, 
-        train_num_steps=60000,
+        train_num_steps=500000,
         i_image =100,
-        train_lr=1e-3, 
+        train_lr=5e-4, 
         amp=False,
         fp16=False,
-        results_folder='result/ship_2',
+        results_folder='result/ship_lr5e-4',
         render_kwargs=render_kwargs,
     )
 
