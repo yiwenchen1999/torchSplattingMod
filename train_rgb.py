@@ -7,7 +7,7 @@ from gaussian_splatting.utils.data_utils import read_all
 from gaussian_splatting.utils.camera_utils import to_viewpoint_camera
 from gaussian_splatting.utils.point_utils import get_point_clouds
 from gaussian_splatting.gauss_model import GaussModel
-from gaussian_splatting.gauss_render import GaussRenderer
+from gaussian_splatting.gauss_render_og import GaussRenderer
 import cv2
 import contextlib
 
