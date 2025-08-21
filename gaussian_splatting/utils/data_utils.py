@@ -98,12 +98,12 @@ def read_image(rgb_file, pose, intrinsic_, max_depth, resize_factor=1, white_bkg
         depth = (255 - depth) / 255.0 * 8.0
         if len(depth.shape) == 3:
             depth = depth[:, :, 0]
+        alpha = torch.from_numpy(imageio.imread(rgb_file.replace('.png','_alpha.png')).astype(np.float32))
     else:
         sys.exit("Unknown dataset")
 
         # depth = depth / 255.0 * 5.0
         # print(depth.shape)
-        alpha = torch.from_numpy(imageio.imread(rgb_file.replace('.png','_alpha.png')).astype(np.float32))
     
     
     image_size = rgb.shape[:2]
