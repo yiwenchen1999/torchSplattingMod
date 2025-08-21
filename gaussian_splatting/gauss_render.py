@@ -174,6 +174,7 @@ class GaussRenderer(nn.Module):
         return color
     
     def render(self, camera, means2D, cov2d, color, opacity, depths, render_latents = False):
+        print('color', color.shape)
         if render_latents:
             camera.image_width = 64
             camera.image_height = 64
@@ -219,7 +220,7 @@ class GaussRenderer(nn.Module):
                 tile_color = (T * alpha * sorted_color[None]).sum(dim=1) + (1-acc_alpha) * (1 if self.white_bkgd else 0)
                 tile_depth = ((T * alpha) * sorted_depths[None,:,None]).sum(dim=1)
                 print("tile_color", tile_color.shape)
-                print("fill color", self.render_color[h:h+TILE_SIZE, w:w+TILE_SIZE].shape)
+                print("fill color", self.render_color.shape)
                 print("range: h: ", h, h+TILE_SIZE, "w: ", w, w+TILE_SIZE)
                 self.render_color[h:h+TILE_SIZE, w:w+TILE_SIZE] = tile_color.reshape(TILE_SIZE, TILE_SIZE, -1)
                 self.render_depth[h:h+TILE_SIZE, w:w+TILE_SIZE] = tile_depth.reshape(TILE_SIZE, TILE_SIZE, -1)
