@@ -157,19 +157,20 @@ class GaussRenderer(nn.Module):
     >>> out = gaussRender(pc=gaussModel, camera=camera)
     """
 
-    def __init__(self, active_sh_degree=3, white_bkgd=True, **kwargs):
+    def __init__(self, active_sh_degree=3, white_bkgd=True, latent_model=False,**kwargs):
         super(GaussRenderer, self).__init__()
         self.active_sh_degree = active_sh_degree
         self.debug = False
         self.white_bkgd = white_bkgd
         self.pix_coord = torch.stack(torch.meshgrid(torch.arange(64), torch.arange(64), indexing='xy'), dim=-1).to('cuda')
-        
+        self.latent_model = latent_model
     
     def build_color(self, means3D, shs, camera):
         rays_o = camera.camera_center
         rays_d = means3D - rays_o
         color = eval_sh(self.active_sh_degree, shs.permute(0,2,1), rays_d)
-        #^ color = (color + 0.5).clip(min=-0.2, max=0.2)
+        if not self.latent_model:
+            color = (color + 0.5).clip(min=-0.2, max=0.2)
         return color
     
     def render(self, camera, means2D, cov2d, color, opacity, depths, render_latents = False):
@@ -182,7 +183,6 @@ class GaussRenderer(nn.Module):
             self.render_color = torch.ones(*self.pix_coord.shape[:2], 4).to('cuda')
         else:
             self.render_color = torch.ones(*self.pix_coord.shape[:2], 3).to('cuda')
-            print("render_color", self.render_color.shape)
         self.render_depth = torch.zeros(*self.pix_coord.shape[:2], 1).to('cuda')
         self.render_alpha = torch.zeros(*self.pix_coord.shape[:2], 1).to('cuda')
 
@@ -218,6 +218,9 @@ class GaussRenderer(nn.Module):
                 acc_alpha = (alpha * T).sum(dim=1)
                 tile_color = (T * alpha * sorted_color[None]).sum(dim=1) + (1-acc_alpha) * (1 if self.white_bkgd else 0)
                 tile_depth = ((T * alpha) * sorted_depths[None,:,None]).sum(dim=1)
+                print("tile_color", tile_color.shape)
+                print("fill color", self.render_color[h:h+TILE_SIZE, w:w+TILE_SIZE].shape)
+                print("range: h: ", h, h+TILE_SIZE, "w: ", w, w+TILE_SIZE)
                 self.render_color[h:h+TILE_SIZE, w:w+TILE_SIZE] = tile_color.reshape(TILE_SIZE, TILE_SIZE, -1)
                 self.render_depth[h:h+TILE_SIZE, w:w+TILE_SIZE] = tile_depth.reshape(TILE_SIZE, TILE_SIZE, -1)
                 self.render_alpha[h:h+TILE_SIZE, w:w+TILE_SIZE] = acc_alpha.reshape(TILE_SIZE, TILE_SIZE, -1)
