@@ -80,6 +80,7 @@ class GSSTrainer(Trainer):
             # Get other gaussian parameters if available
             features = None
             if hasattr(self.model, '_features_dc') and self.model._features_dc is not None:
+                print('features_dc', self.model._features_dc.shape)
                 features = self.model._features_dc.detach().cpu().numpy()
             
             # Create a simple point cloud with xyz coordinates
