@@ -71,7 +71,7 @@ def read_all(folder, resize_factor=1., latent_model=False):
     src_rgbs = src_alphas[..., None] * src_rgbs + (1-src_alphas)[..., None]
     if latent_model:
         src_latents = torch.stack(src_latents, axis=0)
-    print('returning with data', src_rgbs.shape, src_cameras.shape, src_depths.shape, src_alphas.shape, src_latents.shape)
+    print('returning with data', src_rgbs.shape, src_cameras.shape, src_depths.shape, src_alphas.shape)
     if latent_model:
         return {
             "rgb": src_rgbs[..., :3],
