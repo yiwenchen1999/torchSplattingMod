@@ -36,7 +36,9 @@ def get_point_clouds(cameras, depths, alphas, rgbs=None):
     """
     depth map to point cloud
     """
+    print(f'pcd gen got data: cameras {cameras.shape}, depths {depths.shape}, alphas {alphas.shape}, rgbs {rgbs.shape}')
     Hs, Ws, intrinsics, c2ws = parse_camera(cameras)
+    print(f'pcd gen got data: Hs {Hs}, Ws {Ws}, intrinsics {intrinsics.shape}, c2ws {c2ws.shape}')
     W, H = int(Ws[0].item()), int(Hs[0].item())
     assert (depths.shape == alphas.shape)
     coords = []
