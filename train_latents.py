@@ -168,7 +168,7 @@ class GSSTrainer(Trainer):
             camera.image_height = 64
 
         rgb = self.data['rgb'][ind].detach().cpu().numpy()
-        out = self.gaussRender(pc=self.model, camera=camera)
+        out = self.gaussRender(pc=self.model, camera=camera, latent_model=self.latent_model)
         rgb_pd = out['render'].detach().cpu().numpy()[..., :3]
         depth_pd = out['depth'].detach().cpu().numpy()[..., 0]
         depth = self.data['depth'][ind].detach().cpu().numpy()
