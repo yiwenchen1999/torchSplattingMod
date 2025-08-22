@@ -160,7 +160,7 @@ class GaussRenderer(nn.Module):
         self.active_sh_degree = active_sh_degree
         self.debug = False
         self.white_bkgd = white_bkgd
-        self.pix_coord = torch.stack(torch.meshgrid(torch.arange(256), torch.arange(256), indexing='xy'), dim=-1).to('cuda')
+        self.pix_coord = torch.stack(torch.meshgrid(torch.arange(512), torch.arange(512), indexing='xy'), dim=-1).to('cuda')
         
     
     def build_color(self, means3D, shs, camera):
@@ -213,8 +213,8 @@ class GaussRenderer(nn.Module):
                 acc_alpha = (alpha * T).sum(dim=1)
                 tile_color = (T * alpha * sorted_color[None]).sum(dim=1) + (1-acc_alpha) * (1 if self.white_bkgd else 0)
                 tile_depth = ((T * alpha) * sorted_depths[None,:,None]).sum(dim=1)
-                # print('render color', self.render_color[h:h+TILE_SIZE, w:w+TILE_SIZE].shape)
-                # print('tile color', tile_color.shape)
+                print('render color', self.render_color[h:h+TILE_SIZE, w:w+TILE_SIZE].shape)
+                print('tile color', tile_color.shape)
                 self.render_color[h:h+TILE_SIZE, w:w+TILE_SIZE] = tile_color.reshape(TILE_SIZE, TILE_SIZE, -1)
                 self.render_depth[h:h+TILE_SIZE, w:w+TILE_SIZE] = tile_depth.reshape(TILE_SIZE, TILE_SIZE, -1)
                 self.render_alpha[h:h+TILE_SIZE, w:w+TILE_SIZE] = acc_alpha.reshape(TILE_SIZE, TILE_SIZE, -1)
