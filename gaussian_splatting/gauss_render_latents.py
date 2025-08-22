@@ -233,9 +233,9 @@ class GaussRenderer(nn.Module):
         scales = pc.get_scaling
         rotations = pc.get_rotation
         shs = pc.get_features
-        if latent_model:
-            camera.image_width = 64
-            camera.image_height = 64
+        # if latent_model:
+        #     camera.image_width = 64
+        #     camera.image_height = 64
         
         if USE_PROFILE:
             prof = profiler.record_function

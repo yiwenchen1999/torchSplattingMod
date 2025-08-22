@@ -42,9 +42,9 @@ class GSSTrainer(Trainer):
             prof = contextlib.nullcontext()
 
         with prof:
-            if self.latent_model:
-                camera.image_width = 64
-                camera.image_height = 64
+            # if self.latent_model:
+            #     camera.image_width = 64
+            #     camera.image_height = 64
             out = self.gaussRender(pc=self.model, camera=camera, latent_model=self.latent_model)
 
         if USE_PROFILE:
@@ -163,9 +163,9 @@ class GSSTrainer(Trainer):
         camera = self.data['camera'][ind]
         if USE_GPU_PYTORCH:
             camera = to_viewpoint_camera(camera)
-        if self.latent_model:
-            camera.image_width = 64
-            camera.image_height = 64
+        # if self.latent_model:
+        #     camera.image_width = 64
+        #     camera.image_height = 64
 
         rgb = self.data['rgb'][ind].detach().cpu().numpy()
         out = self.gaussRender(pc=self.model, camera=camera, latent_model=self.latent_model)
