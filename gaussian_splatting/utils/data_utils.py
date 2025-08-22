@@ -38,6 +38,7 @@ def read_all(folder, resize_factor=1., latent_model=False):
     read source images from a folder
     """
     # scene_src_dir = os.path.join(self.folder_path_src, scene_id)
+    print('reading folder', folder)
     src_rgb_files, src_poses, src_intrinsics, max_depth = read_camera(folder)
 
     src_cameras = []
@@ -70,6 +71,7 @@ def read_all(folder, resize_factor=1., latent_model=False):
     src_rgbs = src_alphas[..., None] * src_rgbs + (1-src_alphas)[..., None]
     if latent_model:
         src_latents = torch.stack(src_latents, axis=0)
+    print('returning with data', src_rgbs.shape, src_cameras.shape, src_depths.shape, src_alphas.shape, src_latents.shape)
     if latent_model:
         return {
             "rgb": src_rgbs[..., :3],
