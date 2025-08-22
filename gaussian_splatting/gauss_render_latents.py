@@ -184,7 +184,7 @@ class GaussRenderer(nn.Module):
         for h in range(0, camera.image_height, TILE_SIZE):
             for w in range(0, camera.image_width, TILE_SIZE):
                 # check if the rectangle penetrate the tile
-                print('filtering tile', h, w, 'to', h+TILE_SIZE, w+TILE_SIZE)
+                # print('filtering tile', h, w, 'to', h+TILE_SIZE, w+TILE_SIZE)
                 over_tl = rect[0][..., 0].clip(min=w), rect[0][..., 1].clip(min=h)
                 over_br = rect[1][..., 0].clip(max=w+TILE_SIZE-1), rect[1][..., 1].clip(max=h+TILE_SIZE-1)
                 in_mask = (over_br[0] > over_tl[0]) & (over_br[1] > over_tl[1]) # 3D gaussian in the tile 
@@ -213,8 +213,8 @@ class GaussRenderer(nn.Module):
                 acc_alpha = (alpha * T).sum(dim=1)
                 tile_color = (T * alpha * sorted_color[None]).sum(dim=1) + (1-acc_alpha) * (1 if self.white_bkgd else 0)
                 tile_depth = ((T * alpha) * sorted_depths[None,:,None]).sum(dim=1)
-                print('render color', self.render_color[h:h+TILE_SIZE, w:w+TILE_SIZE].shape)
-                print('tile color', tile_color.shape)
+                # print('render color', self.render_color[h:h+TILE_SIZE, w:w+TILE_SIZE].shape)
+                # print('tile color', tile_color.shape)
                 self.render_color[h:h+TILE_SIZE, w:w+TILE_SIZE] = tile_color.reshape(TILE_SIZE, TILE_SIZE, -1)
                 self.render_depth[h:h+TILE_SIZE, w:w+TILE_SIZE] = tile_depth.reshape(TILE_SIZE, TILE_SIZE, -1)
                 self.render_alpha[h:h+TILE_SIZE, w:w+TILE_SIZE] = acc_alpha.reshape(TILE_SIZE, TILE_SIZE, -1)
