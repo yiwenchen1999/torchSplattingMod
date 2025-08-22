@@ -64,6 +64,7 @@ class GaussModel(nn.Module):
         fused_color = RGB2SH(torch.tensor(np.asarray(colors)).float().cuda())
 
         print("Number of points at initialisation : ", fused_point_cloud.shape[0])
+        print('is latent model', self.latent_model)
         if self.latent_model:
             features = torch.zeros((fused_color.shape[0], 4, (self.max_sh_degree + 1) ** 2)).float().cuda()
             features[:, :3, 0 ] = fused_color
