@@ -160,7 +160,7 @@ class GaussRenderer(nn.Module):
         self.active_sh_degree = active_sh_degree
         self.debug = False
         self.white_bkgd = white_bkgd
-        self.pix_coord = torch.stack(torch.meshgrid(torch.arange(512), torch.arange(512), indexing='xy'), dim=-1).to('cuda')
+        self.pix_coord = torch.stack(torch.meshgrid(torch.arange(256), torch.arange(256), indexing='xy'), dim=-1).to('cuda')
         
     
     def build_color(self, means3D, shs, camera):
@@ -234,9 +234,9 @@ class GaussRenderer(nn.Module):
         scales = pc.get_scaling
         rotations = pc.get_rotation
         shs = pc.get_features
-        if latent_model:
-            camera.image_width = 512
-            camera.image_height = 512
+        # if latent_model:
+        #     camera.image_width = 512
+        #     camera.image_height = 512
         
         if USE_PROFILE:
             prof = profiler.record_function
