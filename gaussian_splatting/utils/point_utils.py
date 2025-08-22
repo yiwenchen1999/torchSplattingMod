@@ -36,15 +36,16 @@ def get_point_clouds(cameras, depths, alphas, rgbs=None):
     """
     depth map to point cloud
     """
-    print(f'pcd gen got data: cameras {cameras.shape}, depths {depths.shape}, alphas {alphas.shape}, rgbs {rgbs.shape}')
+    # print(f'pcd gen got data: cameras {cameras.shape}, depths {depths.shape}, alphas {alphas.shape}, rgbs {rgbs.shape}')
     Hs, Ws, intrinsics, c2ws = parse_camera(cameras)
-    print(f'pcd gen got data: Hs {Hs}, Ws {Ws}, intrinsics {intrinsics.shape}, c2ws {c2ws.shape}')
+    # print(f'pcd gen got data: Hs {Hs}, Ws {Ws}, intrinsics {intrinsics.shape}, c2ws {c2ws.shape}')
     W, H = int(Ws[0].item()), int(Hs[0].item())
     assert (depths.shape == alphas.shape)
     coords = []
     rgbas = []
     rays_o, rays_d = get_rays_single_image(H=H, W=W, intrinsics=intrinsics, c2w=c2ws)
-    mask = (alphas.flatten(1) == 1)
+    mask = (alphas.flatten(1) > 0.5)
+    print('mask', mask.sum())
     # print("ray_d length", rays_d.norm(dim=-1))
     pts = rays_o + rays_d * depths.flatten(1).unsqueeze(-1)/rays_d.norm(p=2,dim=2,keepdim=True)
     # pts = rays_d * depths.flatten(1).unsqueeze(-1) + rays_o
