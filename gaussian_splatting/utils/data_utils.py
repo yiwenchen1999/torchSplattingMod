@@ -33,7 +33,7 @@ def read_camera(folder):
         intrinsics.append(np.array(item['intrinsic']))
     return rgb_files, poses, intrinsics, max_depth
 
-def read_all(folder, resize_factor=1., latent_model=False):
+def read_all(folder, resize_factor=1., latent_model=False, image_size=128):
     """
     read source images from a folder
     """
@@ -52,7 +52,7 @@ def read_all(folder, resize_factor=1., latent_model=False):
         read_image(src_rgb_file, src_pose, 
             intrinsic, max_depth=max_depth, resize_factor=resize_factor)
         file_name = src_rgb_file.split('/')[-1]
-        latent_file = os.path.join(folder, 'vae_latents', file_name.replace('png','npy'))
+        latent_file = os.path.join(folder, f'vae_latents_{image_size}', file_name.replace('png','npy'))
         # latent_file = latent_file.replace('png','npy')
         if latent_model:
             src_latent = torch.from_numpy(np.load(latent_file))
