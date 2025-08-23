@@ -77,7 +77,9 @@ def main():
     dtype = torch.float16 if args.device.startswith("cuda") or args.fp16 else torch.float32
     vae = load_vae(args.vae, args.sd, device=args.device, dtype=dtype)
 
-    for lat_path in tqdm(latents_files, desc="Decoding"):
+    for lat_path in tqdm(latents_files, desc="Decoding"):   
+        if 'image' not in lat_path.name:
+            continue
         rel = Path(lat_path).relative_to(args.input)
         out_img = (Path(args.output) / rel).with_suffix(args.ext)
         out_img.parent.mkdir(parents=True, exist_ok=True)
@@ -88,9 +90,6 @@ def main():
         # Load latent
         # print('lat_path', lat_path)
         arr = np.load(lat_path, allow_pickle=True)  # (4,h,w)
-        if arr.dtype == object:
-            arr_list = arr.tolist()
-            print('arr_list', arr_list)
         lat = torch.from_numpy(arr).to(args.device, dtype=dtype)
         if lat.dim() == 3:
             lat = lat.unsqueeze(0)  # (1,4,h,w)
