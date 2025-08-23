@@ -15,7 +15,7 @@ from torch.profiler import profile, ProfilerActivity
 
 USE_GPU_PYTORCH = True
 USE_PROFILE = False
-IMAGE_SIZE = 128
+IMAGE_SIZE = 64
 
 class GSSTrainer(Trainer):
     def __init__(self, latent_model=False, **kwargs):
