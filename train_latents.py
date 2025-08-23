@@ -190,6 +190,9 @@ class GSSTrainer(Trainer):
             rgb_pdnp = out['render'].detach().cpu().numpy()
             # Rearrange from (H,W,C) to (C,H,W)
             rgb_pdnp = np.transpose(rgb_pdnp, (2, 0, 1))
+            # save as float16
+            print('rgb_pdnp', rgb_pdnp.shape, rgb_pdnp.dtype)
+            rgb_pdnp = rgb_pdnp.astype(np.float32)
             np.save(str(self.results_folder / f'image-{self.step}.npy'), rgb_pdnp)
 
 
