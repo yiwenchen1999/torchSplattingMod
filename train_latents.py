@@ -15,12 +15,13 @@ from torch.profiler import profile, ProfilerActivity
 
 USE_GPU_PYTORCH = True
 USE_PROFILE = False
+IMAGE_SIZE = 128
 
 class GSSTrainer(Trainer):
     def __init__(self, latent_model=False, **kwargs):
         super().__init__(**kwargs)
         self.data = kwargs.get('data')
-        self.gaussRender = GaussRenderer(**kwargs.get('render_kwargs', {}))
+        self.gaussRender = GaussRenderer(image_size=IMAGE_SIZE, **kwargs.get('render_kwargs', {}))
         self.latent_model = latent_model
         self.lambda_dssim = 0.2
         self.lambda_depth = 0.0
@@ -199,7 +200,7 @@ class GSSTrainer(Trainer):
 if __name__ == "__main__":
     device = 'cuda'
     folder = '../nerf_synthetic/ship_latents_processed_test'
-    scene_name = 'ship_latents_128'
+    scene_name = f'ship_latents_{IMAGE_SIZE}'
     # folder = 'B075X65R3X'
     # scene_name = 'chair_rgb'
     latent_model = True
