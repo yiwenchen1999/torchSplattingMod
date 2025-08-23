@@ -17,13 +17,14 @@ USE_GPU_PYTORCH = True
 USE_PROFILE = False
 
 class GSSTrainer(Trainer):
-    def __init__(self, latent_model=False, **kwargs):
+    def __init__(self, latent_model=False, image_size=128, **kwargs):
         super().__init__(**kwargs)
         self.data = kwargs.get('data')
-        self.gaussRender = GaussRenderer(**kwargs.get('render_kwargs', {}))
+        self.gaussRender = GaussRenderer(image_size=image_size, **kwargs.get('render_kwargs', {}))
         self.latent_model = latent_model
         self.lambda_dssim = 0.2
         self.lambda_depth = 0.0
+        self.image_size = image_size
     
     def on_train_step(self):
         ind = np.random.choice(len(self.data['camera']))
@@ -194,11 +195,12 @@ class GSSTrainer(Trainer):
 if __name__ == "__main__":
     device = 'cuda'
     folder = '../nerf_synthetic/ship_latents_processed_test'
-    scene_name = 'ship_rgb'
+    scene_name = 'ship_rgb_128'
     # folder = 'B075X65R3X'
     # scene_name = 'chair_rgb'
+    image_size = 128
     latent_model = False
-    data = read_all(folder, resize_factor=0.5)
+    data = read_all(folder, resize_factor=128.0/512.0)
     data = {k: v.to(device) for k, v in data.items()}
     data['depth_range'] = torch.Tensor([[1,3]]*len(data['rgb'])).to(device)
 
@@ -225,6 +227,7 @@ if __name__ == "__main__":
         results_folder=f'result/{scene_name}',
         latent_model=latent_model,
         render_kwargs=render_kwargs,
+        image_size=image_size,
     )
 
     trainer.on_evaluate_step()

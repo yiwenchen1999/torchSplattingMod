@@ -155,13 +155,13 @@ class GaussRenderer(nn.Module):
     >>> out = gaussRender(pc=gaussModel, camera=camera)
     """
 
-    def __init__(self, active_sh_degree=3, white_bkgd=True, **kwargs):
+    def __init__(self, active_sh_degree=3, white_bkgd=True, image_size=128, **kwargs):
         super(GaussRenderer, self).__init__()
         self.active_sh_degree = active_sh_degree
         self.debug = False
         self.white_bkgd = white_bkgd
-        self.pix_coord = torch.stack(torch.meshgrid(torch.arange(256), torch.arange(256), indexing='xy'), dim=-1).to('cuda')
-        
+        self.pix_coord = torch.stack(torch.meshgrid(torch.arange(image_size), torch.arange(image_size), indexing='xy'), dim=-1).to('cuda')
+        self.image_size = image_size
     
     def build_color(self, means3D, shs, camera):
         rays_o = camera.camera_center
@@ -229,7 +229,8 @@ class GaussRenderer(nn.Module):
         scales = pc.get_scaling
         rotations = pc.get_rotation
         shs = pc.get_features
-        
+        camera.image_width = self.image_size
+        camera.image_height = self.image_size
         if USE_PROFILE:
             prof = profiler.record_function
         else:
