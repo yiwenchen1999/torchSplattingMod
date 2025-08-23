@@ -195,12 +195,12 @@ class GSSTrainer(Trainer):
 if __name__ == "__main__":
     device = 'cuda'
     folder = '../nerf_synthetic/ship_latents_processed_test'
-    scene_name = 'ship_rgb_128'
+    scene_name = 'ship_rgb_64'
     # folder = 'B075X65R3X'
     # scene_name = 'chair_rgb'
-    image_size = 128
+    image_size = 64
     latent_model = False
-    data = read_all(folder, resize_factor=128.0/512.0)
+    data = read_all(folder, resize_factor=64.0/512.0)
     data = {k: v.to(device) for k, v in data.items()}
     data['depth_range'] = torch.Tensor([[1,3]]*len(data['rgb'])).to(device)
 
