@@ -199,7 +199,7 @@ class GSSTrainer(Trainer):
 if __name__ == "__main__":
     device = 'cuda'
     folder = '../nerf_synthetic/ship_latents_processed_test'
-    scene_name = 'ship_latents_2048'
+    scene_name = 'ship_latents_128'
     # folder = 'B075X65R3X'
     # scene_name = 'chair_rgb'
     latent_model = True
