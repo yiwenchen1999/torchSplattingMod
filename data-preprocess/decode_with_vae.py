@@ -88,7 +88,8 @@ def main():
         # Load latent
         # print('lat_path', lat_path)
         arr = np.load(lat_path, allow_pickle=True)  # (4,h,w)
-        print('arr', arr.shape, arr.dtype)
+        if arr.dtype == object:
+            arr = np.array(arr.tolist(), dtype=np.float32)  # convert to numeric
         lat = torch.from_numpy(arr).to(args.device, dtype=dtype)
         if lat.dim() == 3:
             lat = lat.unsqueeze(0)  # (1,4,h,w)
