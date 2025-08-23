@@ -86,6 +86,7 @@ def main():
             pass
 
         # Load latent
+        print('lat_path', lat_path)
         arr = np.load(lat_path)  # (4,h,w)
         lat = torch.from_numpy(arr).to(args.device, dtype=dtype)
         if lat.dim() == 3:
