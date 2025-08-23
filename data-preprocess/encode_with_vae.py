@@ -71,7 +71,7 @@ def main():
     parser.add_argument("--output", required=True, help="Output folder for .npy latents")
     parser.add_argument("--vae", default=None, help="Optional VAE repo/path")
     parser.add_argument("--sd", default=None, help="Optional SD repo/path; loads its /vae")
-    parser.add_argument("--size", type=int, default=2048, help="Square size after resize+crop")
+    parser.add_argument("--size", type=int, default=1024, help="Square size after resize+crop")
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--fp16", action="store_true", help="Force float16 inference/storage")
     parser.add_argument("--sample", action="store_true", help="Sample from latent distribution")
@@ -111,6 +111,7 @@ def main():
 
         # Save latent
         lat_cpu = latents.to("cpu")
+        print('lat_cpu', lat_cpu.shape, lat_cpu.dtype)
         np.save(out_latent, lat_cpu.half().numpy() if dtype == torch.float16 else lat_cpu.numpy())
 
         # Downscale mask to latent resolution and save
