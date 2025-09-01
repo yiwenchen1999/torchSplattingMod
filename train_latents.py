@@ -26,6 +26,100 @@ class GSSTrainer(Trainer):
         self.lambda_dssim = 0.2
         self.lambda_depth = 0.0
     
+    def on_evaluate_step(self, **kwargs):
+        import matplotlib.pyplot as plt
+        save_path = self.results_folder / f'general_eval'
+        ind = np.random.choice(len(self.data['camera']))
+        camera = self.data['camera'][ind]
+        if USE_GPU_PYTORCH:
+            camera = to_viewpoint_camera(camera)
+        # if self.latent_model:
+        #     camera.image_width = 64
+        #     camera.image_height = 64
+
+        rgb = self.data['rgb'][ind].detach().cpu().numpy()
+        out = self.gaussRender(pc=self.model, camera=camera, latent_model=self.latent_model)
+        rgb_pd = out['render'].detach().cpu().numpy()[..., :3]
+        depth_pd = out['depth'].detach().cpu().numpy()[..., 0]
+        depth = self.data['depth'][ind].detach().cpu().numpy()
+        # if the shape does not match, resize the depth_pd
+        if depth.shape != depth_pd.shape:
+            depth_pd = cv2.resize(depth_pd, (depth.shape[1], depth.shape[0]))
+        depth = np.concatenate([depth, depth_pd], axis=1)
+        depth = (1 - depth / depth.max())
+        depth = plt.get_cmap('jet')(depth)[..., :3]
+        if rgb.shape != rgb_pd.shape:
+            rgb_pd = cv2.resize(rgb_pd, (rgb.shape[1], rgb.shape[0]))
+        image = np.concatenate([rgb, rgb_pd], axis=1)
+        image = np.concatenate([image, depth], axis=0)
+        utils.imwrite(str(save_path / f'image-{self.step}.png'), image)
+        
+        if self.latent_model:
+            rgb_pdnp = out['render'].detach().cpu().numpy()
+            # Rearrange from (H,W,C) to (C,H,W)
+            rgb_pdnp = np.transpose(rgb_pdnp, (2, 0, 1))
+            # save as float16
+            print('rgb_pdnp', rgb_pdnp.shape, rgb_pdnp.dtype)
+            rgb_pdnp = rgb_pdnp.astype(np.float32)
+            np.save(str(save_path / f'image-{self.step}.npy'), rgb_pdnp)
+
+    def evaluate_all_samples(self, step):
+        """
+        Evaluate on all instances in the dataset instead of randomly sampling one.
+        Creates a new folder named after the current step to store results.
+        Names results after the sampled index.
+        """
+        import matplotlib.pyplot as plt
+        import os
+        
+        # Create evaluation folder for this step
+        eval_folder = self.results_folder / f'eval_step_{step}'
+        eval_folder.mkdir(exist_ok=True)
+        
+        print(f"Starting comprehensive evaluation at step {step} for all {len(self.data['camera'])} samples...")
+        
+        # Evaluate on all samples
+        for ind in range(len(self.data['camera'])):
+            camera = self.data['camera'][ind]
+            if USE_GPU_PYTORCH:
+                camera = to_viewpoint_camera(camera)
+            
+            rgb = self.data['rgb'][ind].detach().cpu().numpy()
+            out = self.gaussRender(pc=self.model, camera=camera, latent_model=self.latent_model)
+            rgb_pd = out['render'].detach().cpu().numpy()[..., :3]
+            depth_pd = out['depth'].detach().cpu().numpy()[..., 0]
+            depth = self.data['depth'][ind].detach().cpu().numpy()
+            
+            # Handle shape mismatches
+            if depth.shape != depth_pd.shape:
+                depth_pd = cv2.resize(depth_pd, (depth.shape[1], depth.shape[0]))
+            if rgb.shape != rgb_pd.shape:
+                rgb_pd = cv2.resize(rgb_pd, (rgb.shape[1], rgb.shape[0]))
+            
+            # Create depth visualization
+            depth_combined = np.concatenate([depth, depth_pd], axis=1)
+            depth_combined = (1 - depth_combined / depth_combined.max())
+            depth_combined = plt.get_cmap('jet')(depth_combined)[..., :3]
+            
+            # Create combined image
+            image = np.concatenate([rgb, rgb_pd], axis=1)
+            image = np.concatenate([image, depth_combined], axis=0)
+            
+            # Save image with sample index
+            utils.imwrite(str(eval_folder / f'sample_{ind:04d}.png'), image)
+            
+            # Save latent output if using latent model
+            if self.latent_model:
+                rgb_pdnp = out['render'].detach().cpu().numpy()
+                rgb_pdnp = np.transpose(rgb_pdnp, (2, 0, 1))
+                rgb_pdnp = rgb_pdnp.astype(np.float32)
+                np.save(str(eval_folder / f'sample_{ind:04d}.npy'), rgb_pdnp)
+            
+            if (ind + 1) % 50 == 0:
+                print(f"Processed {ind + 1}/{len(self.data['camera'])} samples...")
+                
+        print(f"Comprehensive evaluation completed at step {step}. Results saved in {eval_folder}")
+
     def on_train_step(self):
         ind = np.random.choice(len(self.data['camera']))
         camera = self.data['camera'][ind]
@@ -68,6 +162,11 @@ class GSSTrainer(Trainer):
         psnr = utils.img2psnr(out['render'], gt)
         total_loss = l1_loss
         log_dict = {'total': total_loss,'l1':l1_loss, 'psnr': psnr}
+
+        # Check if we should do comprehensive evaluation
+        if self.step in [0, 30000, 60000, 90000]:
+            print(f"Step {self.step} reached - starting comprehensive evaluation...")
+            self.evaluate_all_samples(self.step)
 
         return total_loss, log_dict
 
@@ -157,44 +256,6 @@ class GSSTrainer(Trainer):
             
         # except Exception as e:
         #     print(f"Error saving PLY file: {e}")
-
-    def on_evaluate_step(self, **kwargs):
-        import matplotlib.pyplot as plt
-        ind = np.random.choice(len(self.data['camera']))
-        camera = self.data['camera'][ind]
-        if USE_GPU_PYTORCH:
-            camera = to_viewpoint_camera(camera)
-        # if self.latent_model:
-        #     camera.image_width = 64
-        #     camera.image_height = 64
-
-        rgb = self.data['rgb'][ind].detach().cpu().numpy()
-        out = self.gaussRender(pc=self.model, camera=camera, latent_model=self.latent_model)
-        rgb_pd = out['render'].detach().cpu().numpy()[..., :3]
-        depth_pd = out['depth'].detach().cpu().numpy()[..., 0]
-        depth = self.data['depth'][ind].detach().cpu().numpy()
-        # if the shape does not match, resize the depth_pd
-        if depth.shape != depth_pd.shape:
-            depth_pd = cv2.resize(depth_pd, (depth.shape[1], depth.shape[0]))
-        depth = np.concatenate([depth, depth_pd], axis=1)
-        depth = (1 - depth / depth.max())
-        depth = plt.get_cmap('jet')(depth)[..., :3]
-        if rgb.shape != rgb_pd.shape:
-            rgb_pd = cv2.resize(rgb_pd, (rgb.shape[1], rgb.shape[0]))
-        image = np.concatenate([rgb, rgb_pd], axis=1)
-        image = np.concatenate([image, depth], axis=0)
-        utils.imwrite(str(self.results_folder / f'image-{self.step}.png'), image)
-        
-        # Save gaussian xyz as point cloud
-        self.save_gaussian_xyz_as_pointcloud(self.step)
-        if self.latent_model:
-            rgb_pdnp = out['render'].detach().cpu().numpy()
-            # Rearrange from (H,W,C) to (C,H,W)
-            rgb_pdnp = np.transpose(rgb_pdnp, (2, 0, 1))
-            # save as float16
-            print('rgb_pdnp', rgb_pdnp.shape, rgb_pdnp.dtype)
-            rgb_pdnp = rgb_pdnp.astype(np.float32)
-            np.save(str(self.results_folder / f'image-{self.step}.npy'), rgb_pdnp)
 
 
 if __name__ == "__main__":
