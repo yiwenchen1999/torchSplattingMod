@@ -29,6 +29,7 @@ class GSSTrainer(Trainer):
     def on_evaluate_step(self, **kwargs):
         import matplotlib.pyplot as plt
         save_path = self.results_folder / f'general_eval'
+        save_path.mkdir(exist_ok=True)
         ind = np.random.choice(len(self.data['camera']))
         camera = self.data['camera'][ind]
         if USE_GPU_PYTORCH:
