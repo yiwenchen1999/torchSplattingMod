@@ -261,7 +261,7 @@ class GSSTrainer(Trainer):
 
 if __name__ == "__main__":
     device = 'cuda'
-    folder = '../objaverse_synthetic/atlus_processed_test'
+    folder = '../objaverse_synthetic/atlus_processed_train'
     scene_name = f'atlus_{IMAGE_SIZE}_fullEval'
     # folder = 'B075X65R3X'
     # scene_name = 'chair_rgb'
