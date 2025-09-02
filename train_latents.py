@@ -165,7 +165,7 @@ class GSSTrainer(Trainer):
         log_dict = {'total': total_loss,'l1':l1_loss, 'psnr': psnr}
 
         # Check if we should do comprehensive evaluation
-        if self.step in [0, 30000, 60000, 90000]:
+        if self.step % 50000 == 0:
             print(f"Step {self.step} reached - starting comprehensive evaluation...")
             self.evaluate_all_samples(self.step)
 
@@ -262,7 +262,7 @@ class GSSTrainer(Trainer):
 if __name__ == "__main__":
     device = 'cuda'
     folder = '../nerf_synthetic/ship_latents_processed_test'
-    scene_name = f'ship_latents_{IMAGE_SIZE}'
+    scene_name = f'ship_latents_{IMAGE_SIZE}_fullEval'
     # folder = 'B075X65R3X'
     # scene_name = 'chair_rgb'
     latent_model = True
@@ -286,7 +286,7 @@ if __name__ == "__main__":
         data=data,
         train_batch_size=1, 
         train_num_steps=500000,
-        i_image =500,
+        i_image =1000,
         train_lr=1e-3, 
         amp=False,
         fp16=False,
