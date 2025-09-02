@@ -5,8 +5,17 @@ cd ../data-preprocess
 # --output ../../nerf_synthetic/ship_latents_processed_test/vae_latents_decoded
 
 python decode_with_vae.py \
---input ../result/ship_latents_64/eval_step_90000 \
---output ../result/ship_latents_64/eval_step_90000_decoded
+--input ../result/atlus_64_fullEval/general_eval/ \
+--output ../result/atlus_64_fullEval/general_eval_decoded
+
+python decode_with_vae.py \
+--input ../result/statue_64_fullEval/general_eval/ \
+--output ../result/statue_64_fullEval/general_eval_decoded
+
+python decode_with_vae.py \
+--input ../result/shop_64_fullEval/general_eval/ \
+--output ../result/shop_64_fullEval/general_eval_decoded
+
 
 # python decode_with_vae.py \
 # --input ../result/ship_latents_128_adjustedInit \
