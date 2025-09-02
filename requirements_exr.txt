@@ -1,0 +1,14 @@
+# Requirements for EXR file reading
+# Install with: pip install -r requirements_exr.txt
+
+# For proper EXR file reading (recommended)
+OpenEXR>=1.4.0
+
+# Alternative EXR reader (fallback)
+opencv-python>=4.5.0
+
+# For image processing
+numpy>=1.19.0
+torch>=1.8.0
+imageio>=2.8.0
+einops>=0.3.0

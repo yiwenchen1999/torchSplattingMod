@@ -44,11 +44,14 @@ def get_point_clouds(cameras, depths, alphas, rgbs=None):
     coords = []
     rgbas = []
     rays_o, rays_d = get_rays_single_image(H=H, W=W, intrinsics=intrinsics, c2w=c2ws)
+    print('alphas', alphas.shape)
+    print('depths', depths.shape)
     mask = (alphas.flatten(1) > 0.5)
+    print('mask', mask.shape)
     print('mask', mask.sum())
     # print("ray_d length", rays_d.norm(dim=-1))
-    pts = rays_o + rays_d * depths.flatten(1).unsqueeze(-1)/rays_d.norm(p=2,dim=2,keepdim=True)
-    # pts = rays_d * depths.flatten(1).unsqueeze(-1) + rays_o
+    # pts = rays_o + rays_d * depths.flatten(1).unsqueeze(-1)/rays_d.norm(p=2,dim=2,keepdim=True)
+    pts = rays_d * depths.flatten(1).unsqueeze(-1) + rays_o
     # print('rays_d', rays_d.norm(p=2,dim=2,keepdim=True))
     rgbas = torch.cat([rgbs, alphas.unsqueeze(-1)], dim=-1)
     coords = pts[mask].cpu().numpy()
