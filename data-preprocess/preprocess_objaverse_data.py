@@ -107,10 +107,16 @@ def process_bus_dataset(data_dir, split, output_dir):
     
     images = []
     
+    # Track statistics
+    depth_files_found = 0
+    placeholders_created = 0
+    
     # Process each camera
     for i, camera in enumerate(cameras_data):
         eye_idx = camera['eye_idx']
         c2w_matrix = np.array(camera['c2w'])
+        
+        print(f"Processing camera {i+1}/{len(cameras_data)} (eye_idx: {eye_idx})")
         
         # Determine file paths based on split
         if split == "train":
@@ -135,7 +141,20 @@ def process_bus_dataset(data_dir, split, output_dir):
             # Test uses gt_X.png naming in white_env_0 subdirectory
             rgb_filename = f"gt_{eye_idx}.png"
             rgb_path = data_path / split / "white_env_0" / rgb_filename
-            depth_filename = None  # No depth files in test set
+            
+            # Look for corresponding depth file in depth folder (same as train)
+            depth_filename = None
+            depth_patterns = [
+                f"depth_{eye_idx}.exr",
+                f"depth_{eye_idx}0001.exr",
+                f"depth_{eye_idx:06d}.exr"
+            ]
+            
+            for pattern in depth_patterns:
+                depth_path = data_path / split / "depth" / pattern
+                if depth_path.exists():
+                    depth_filename = pattern
+                    break
         
         # Check if RGB file exists
         if not rgb_path.exists():
@@ -167,20 +186,32 @@ def process_bus_dataset(data_dir, split, output_dir):
             src_depth_path = data_path / split / "depth" / depth_filename
             dst_depth_path = output_path / depth_filename
             if src_depth_path.exists():
-                # For now, just copy the .exr file as is
+                # Copy the .exr file as is
                 import shutil
                 shutil.copy2(src_depth_path, dst_depth_path)
+                print(f"  ✓ Copied depth file: {depth_filename}")
+                depth_files_found += 1
             else:
-                print(f"Warning: Depth file not found: {src_depth_path}")
+                print(f"  ⚠ Warning: Depth file not found: {src_depth_path}")
+                # Create black depth placeholder as fallback
+                depth_filename = rgb_filename.replace('.png', '_depth_placeholder.png')
+                image_entry["depth"] = depth_filename
+                depth_placeholder = np.zeros((image_height, image_width), dtype=np.uint8)
+                depth_img = Image.fromarray(depth_placeholder)
+                dst_depth_path = output_path / depth_filename
+                depth_img.save(dst_depth_path)
+                print(f"  ⚠ Created black depth placeholder as fallback: {depth_filename}")
+                placeholders_created += 1
         else:
-            # Create black depth placeholder
+            # No depth file found, create black depth placeholder
             depth_filename = rgb_filename.replace('.png', '_depth_placeholder.png')
             image_entry["depth"] = depth_filename
             depth_placeholder = np.zeros((image_height, image_width), dtype=np.uint8)
             depth_img = Image.fromarray(depth_placeholder)
             dst_depth_path = output_path / depth_filename
             depth_img.save(dst_depth_path)
-            print(f"Created black depth placeholder: {depth_filename}")
+            print(f"  ⚠ Created black depth placeholder: {depth_filename}")
+            placeholders_created += 1
         
         # Copy RGB file to output directory
         dst_rgb_path = output_path / rgb_filename
@@ -190,6 +221,149 @@ def process_bus_dataset(data_dir, split, output_dir):
         images.append(image_entry)
     
     return images
+
+def cleanup_input_directory(data_dir, split, dry_run=False):
+    """
+    Clean up the input directory by removing .png and .exr files 
+    that are not in the depth/ or white_env_0/ (rgb) folders
+    """
+    data_path = Path(data_dir) / split
+    
+    if not data_path.exists():
+        print(f"Warning: Input directory {data_path} not found, skipping cleanup")
+        return
+    
+    print(f"\nCleaning up input directory: {data_path}")
+    
+    # Define folders that should keep their files
+    keep_folders = {"depth", "white_env_0"}
+    
+    # Show current directory structure
+    print(f"Current directory structure:")
+    
+    # Show root-level files first
+    root_files = list(data_path.glob("*.png")) + list(data_path.glob("*.exr"))
+    if root_files:
+        print(f"  📄 Root level files ({len(root_files)}):")
+        for file_path in sorted(root_files):
+            print(f"    - {file_path.name}")
+    
+    # Show subdirectories
+    for item in sorted(data_path.iterdir()):
+        if item.is_dir():
+            file_count = len(list(item.glob("*.png"))) + len(list(item.glob("*.exr")))
+            print(f"  📁 {item.name}/ ({file_count} image files)")
+    
+    # Get all .png and .exr files in the split directory (root level)
+    root_files = list(data_path.glob("*.png")) + list(data_path.glob("*.exr"))
+    
+    # Get all .png and .exr files in subdirectories (excluding keep_folders)
+    subdir_files = []
+    for subdir in data_path.iterdir():
+        if subdir.is_dir() and subdir.name not in keep_folders:
+            subdir_files.extend(list(subdir.glob("*.png")) + list(subdir.glob("*.exr")))
+    
+    # Combine all files
+    all_files = root_files + subdir_files
+    
+    if not all_files:
+        print("No .png or .exr files found to clean up")
+        return
+    
+    # Files to remove (those not in keep folders)
+    # This includes:
+    # - Root-level files (e.g., rgb_for_depth_86.png, depth_310001.exr)
+    # - Files in other subdirectories (e.g., black_env_0/, colored_env_0/)
+    files_to_remove = []
+    for file_path in all_files:
+        # Check if file is in a keep folder
+        in_keep_folder = False
+        for keep_folder in keep_folders:
+            if keep_folder in file_path.parts:
+                in_keep_folder = True
+                break
+        
+        if not in_keep_folder:
+            files_to_remove.append(file_path)
+    
+    if not files_to_remove:
+        print("No unnecessary files found to remove")
+        return
+    
+    print(f"Found {len(files_to_remove)} unnecessary files to remove:")
+    for file_path in sorted(files_to_remove):
+        print(f"  🗑️  {file_path.relative_to(data_path)}")
+    
+    # Show summary
+    total_size = sum(f.stat().st_size for f in files_to_remove)
+    print(f"\nTotal size to be freed: {total_size / (1024*1024):.2f} MB")
+    
+    if dry_run:
+        print(f"\nDRY RUN MODE: No files were actually deleted")
+        print(f"This was just a preview of what would be cleaned up")
+        return
+    
+    # Ask for confirmation before deletion
+    response = input(f"\nProceed to delete {len(files_to_remove)} files? (y/N): ")
+    if response.lower() != 'y':
+        print("Cleanup cancelled by user")
+        return
+    
+    # Remove the files
+    removed_count = 0
+    for file_path in files_to_remove:
+        try:
+            file_path.unlink()
+            print(f"  ✓ Removed: {file_path.relative_to(data_path)}")
+            removed_count += 1
+        except Exception as e:
+            print(f"  ⚠ Warning: Could not remove {file_path.relative_to(data_path)}: {e}")
+    
+    print(f"\nInput directory cleanup complete: removed {removed_count} files")
+
+def cleanup_unnecessary_files(output_dir):
+    """
+    Remove all .png and .exr files that are not in the rgb and depth folders
+    """
+    output_path = Path(output_dir)
+    
+    # Get list of all files in output directory
+    all_files = list(output_path.glob("*.png")) + list(output_path.glob("*.exr"))
+    
+    # Get list of files that should be kept (from info.json)
+    info_file = output_path / "info.json"
+    if info_file.exists():
+        with open(info_file, 'r') as f:
+            info_data = json.load(f)
+        
+        # Collect all file names that should be kept
+        keep_files = set()
+        for image in info_data['images']:
+            if 'rgb' in image:
+                keep_files.add(image['rgb'])
+            if 'alpha' in image:
+                keep_files.add(image['alpha'])
+            if 'depth' in image:
+                keep_files.add(image['depth'])
+        
+        print(f"Files to keep ({len(keep_files)}):")
+        for file_name in sorted(keep_files):
+            print(f"  ✓ {file_name}")
+        
+        print(f"\nFiles to remove ({len(all_files) - len(keep_files)}):")
+        removed_count = 0
+        for file_path in all_files:
+            if file_path.name not in keep_files:
+                try:
+                    file_path.unlink()
+                    print(f"  🗑️  Removed: {file_path.name}")
+                    removed_count += 1
+                except Exception as e:
+                    print(f"  ⚠ Warning: Could not remove {file_path.name}: {e}")
+        
+        print(f"\nCleanup complete: removed {removed_count} unnecessary files")
+    else:
+        print("Warning: info.json not found, skipping cleanup")
 
 def calculate_bbox(images):
     """
@@ -224,6 +398,10 @@ def main():
                        help='Output directory for processed data')
     parser.add_argument('--split', type=str, choices=['train', 'test'], required=True,
                        help='Which split to process (train or test)')
+    parser.add_argument('--cleanup_input', action='store_true',
+                       help='Clean up unnecessary .png and .exr files in the input directory (removes files not in depth/ or white_env_0/ folders, including root-level files)')
+    parser.add_argument('--dry_run', action='store_true',
+                       help='Show what would be cleaned up without actually deleting files (use with --cleanup_input)')
     
     args = parser.parse_args()
     
@@ -258,6 +436,14 @@ def main():
     print(f"Processed {len(images)} images")
     print(f"Bounding box: {bbox}")
     print(f"Output directory: {args.output_dir}")
+        
+    # Clean up unnecessary files in output directory
+    print("\nCleaning up unnecessary files in output directory...")
+    cleanup_unnecessary_files(args.output_dir)
+    
+    # Clean up input directory if requested
+    if args.cleanup_input:
+        cleanup_input_directory(args.data_dir, args.split, args.dry_run)
 
 if __name__ == "__main__":
     main()
