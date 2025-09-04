@@ -47,7 +47,7 @@ for target in "${targets[@]}"; do
     --scene_name ${target} \
     --image_size 256
     cd data-preprocess
-    python decode_latents.py \
+    python decode_with_vae.py \
     --input ../result/${target}_256/eval_step_150000/ \
     --output ../decoded_result/${target}_256/eval_step_150000_decoded
 
