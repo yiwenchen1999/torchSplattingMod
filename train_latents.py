@@ -165,7 +165,7 @@ class GSSTrainer(Trainer):
         log_dict = {'total': total_loss,'l1':l1_loss, 'psnr': psnr}
 
         # Check if we should do comprehensive evaluation
-        if self.step % 100000 == 0:
+        if self.step % 50000 == 0:
             print(f"Step {self.step} reached - starting comprehensive evaluation...")
             self.evaluate_all_samples(self.step)
 
@@ -260,13 +260,32 @@ class GSSTrainer(Trainer):
 
 
 if __name__ == "__main__":
+    import argparse
+    import os
+    
+    parser = argparse.ArgumentParser(description='Train Gaussian Splatting model with latents')
+    parser.add_argument('--folder', type=str, default='../objaverse_synthetic',
+                       help='Path to dataset folder')
+    parser.add_argument('--scene_name', type=str, default=None,
+                       help='Scene name for output folder')
+    parser.add_argument('--image_size', type=int, default=IMAGE_SIZE,
+                       help='Image size for training')
+    
+    args = parser.parse_args()
+    
     device = 'cuda'
-    folder = '../objaverse_synthetic/atlus_processed_train'
-    scene_name = f'atlus_{IMAGE_SIZE}_fullEval'
+    folder = os.path.join(args.folder, f'{args.scene_name}_processed_train')
+    image_size = args.image_size
+    
+    if args.scene_name is None:
+        scene_name = f'scene_{image_size}'
+    else:
+        scene_name = f'{args.scene_name}_{image_size}'
+    
     # folder = 'B075X65R3X'
     # scene_name = 'chair_rgb'
     latent_model = True
-    data = read_all(folder, resize_factor=IMAGE_SIZE/512.0, latent_model=latent_model, image_size=IMAGE_SIZE)
+    data = read_all(folder, resize_factor=image_size/512.0, latent_model=latent_model, image_size=image_size)
     data = {k: v.to(device) for k, v in data.items()}
     data['depth_range'] = torch.Tensor([[1,3]]*len(data['rgb'])).to(device)
 
@@ -285,7 +304,7 @@ if __name__ == "__main__":
     trainer = GSSTrainer(model=gaussModel, 
         data=data,
         train_batch_size=1, 
-        train_num_steps=500000,
+        train_num_steps=150001,
         i_image =1000,
         train_lr=1e-3, 
         amp=False,
