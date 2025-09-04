@@ -15,13 +15,12 @@ from torch.profiler import profile, ProfilerActivity
 
 USE_GPU_PYTORCH = True
 USE_PROFILE = False
-IMAGE_SIZE = 64
 
 class GSSTrainer(Trainer):
-    def __init__(self, latent_model=False, **kwargs):
+    def __init__(self, latent_model=False, image_size=64, **kwargs):
         super().__init__(**kwargs)
         self.data = kwargs.get('data')
-        self.gaussRender = GaussRenderer(image_size=IMAGE_SIZE, **kwargs.get('render_kwargs', {}))
+        self.gaussRender = GaussRenderer(image_size=image_size, **kwargs.get('render_kwargs', {}))
         self.latent_model = latent_model
         self.lambda_dssim = 0.2
         self.lambda_depth = 0.0
@@ -268,7 +267,7 @@ if __name__ == "__main__":
                        help='Path to dataset folder')
     parser.add_argument('--scene_name', type=str, default=None,
                        help='Scene name for output folder')
-    parser.add_argument('--image_size', type=int, default=IMAGE_SIZE,
+    parser.add_argument('--image_size', type=int, default=64,
                        help='Image size for training')
     
     args = parser.parse_args()
@@ -311,6 +310,7 @@ if __name__ == "__main__":
         fp16=False,
         results_folder=f'result/{scene_name}',
         latent_model=latent_model,
+        image_size=image_size,
         render_kwargs=render_kwargs,
     )
 
