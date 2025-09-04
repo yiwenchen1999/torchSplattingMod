@@ -4,7 +4,7 @@ targets=("statue" "bus" "houseA" "houseB" "shop" "atlus" "chair" "lizard" "lamp"
 for target in "${targets[@]}"; do
     echo "Processing target: $target"
     
-    python encode_with_vae.py \
+    # python encode_with_vae.py \
     # --input ../../objaverse_synthetic/${target}_processed_train \
     # --output ../../objaverse_synthetic/${target}_processed_train/vae_latents_64 \
     # --size 512
