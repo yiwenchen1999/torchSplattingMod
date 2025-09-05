@@ -310,7 +310,7 @@ if __name__ == "__main__":
     trainer = GSSTrainer(model=gaussModel, 
         data=data,
         train_batch_size=1, 
-        train_num_steps=150001,
+        train_num_steps=100001,
         i_image =1000,
         train_lr=1e-3, 
         amp=False,
