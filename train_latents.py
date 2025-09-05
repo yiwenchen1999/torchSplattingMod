@@ -269,7 +269,7 @@ if __name__ == "__main__":
                        help='Scene name for output folder')
     parser.add_argument('--image_size', type=int, default=64,
                        help='Image size for training')
-    parser.add_argument('--input_folder', type=str, default=None,
+    parser.add_argument('--input_folder', type=str, default=None, required=False,
                         help='specify what folder to use')
     
     args = parser.parse_args()
