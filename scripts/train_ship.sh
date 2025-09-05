@@ -1,6 +1,6 @@
 cd ..
 python train_latents.py \
---folder ../nerf_synthetic/ship_latents_processed_test \
+--input_folder ../nerf_synthetic/ship_latents_processed_test \
 --scene_name ship_latents_fullEval \
 --image_size 128
 
