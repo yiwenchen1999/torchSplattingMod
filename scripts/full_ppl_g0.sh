@@ -19,40 +19,43 @@ for target in "${targets[@]}"; do
         --input ../result/${target}_64/eval_step_150000/ \
         --output ../decoded_result/${target}_64/eval_step_150000_decoded
     fi
-
-    if [ ! -d "../../objaverse_synthetic/${target}_processed_train/vae_latents_128" ]; then
-        python encode_with_vae.py \
-        --input ../../objaverse_synthetic/${target}_processed_train \
-        --output ../../objaverse_synthetic/${target}_processed_train/vae_latents_128 \
-        --size 1024
+    
+    if [ ! -d "../decoded_result/${target}_128/eval_step_150000_decoded" ] || [ -z "$(ls -A ../decoded_result/${target}_128/eval_step_150000_decoded 2>/dev/null)" ]; then
+        if [ ! -d "../../objaverse_synthetic/${target}_processed_train/vae_latents_128" ]; then
+            python encode_with_vae.py \
+            --input ../../objaverse_synthetic/${target}_processed_train \
+            --output ../../objaverse_synthetic/${target}_processed_train/vae_latents_128 \
+            --size 1024
+        fi
+        cd ..
+        python train_latents.py \
+        --folder ../objaverse_synthetic \
+        --scene_name ${target} \
+        --image_size 128
+        cd data-preprocess
+        python decode_with_vae.py \
+        --input ../result/${target}_128/eval_step_150000/ \
+        --output ../decoded_result/${target}_128/eval_step_150000_decoded
     fi
-    cd ..
-    python train_latents.py \
-    --folder ../objaverse_synthetic \
-    --scene_name ${target} \
-    --image_size 128
-    cd data-preprocess
-    python decode_with_vae.py \
-    --input ../result/${target}_128/eval_step_150000/ \
-    --output ../decoded_result/${target}_128/eval_step_150000_decoded
 
 
-    if [ ! -d "../../objaverse_synthetic/${target}_processed_train/vae_latents_256" ]; then
+    if [ ! -d "../decoded_result/${target}_256/eval_step_150000_decoded" ] || [ -z "$(ls -A ../decoded_result/${target}_256/eval_step_150000_decoded 2>/dev/null)" ]; then
+        if [ ! -d "../../objaverse_synthetic/${target}_processed_train/vae_latents_256" ]; then
         python encode_with_vae.py \
         --input ../../objaverse_synthetic/${target}_processed_train \
         --output ../../objaverse_synthetic/${target}_processed_train/vae_latents_256 \
         --size 2048
+        fi
+        cd ..
+        python train_latents.py \
+        --folder ../objaverse_synthetic \
+        --scene_name ${target} \
+        --image_size 256
+        cd data-preprocess
+        python decode_with_vae.py \
+        --input ../result/${target}_256/eval_step_150000/ \
+        --output ../decoded_result/${target}_256/eval_step_150000_decoded
     fi
-    cd ..
-    python train_latents.py \
-    --folder ../objaverse_synthetic \
-    --scene_name ${target} \
-    --image_size 256
-    cd data-preprocess
-    python decode_with_vae.py \
-    --input ../result/${target}_256/eval_step_150000/ \
-    --output ../decoded_result/${target}_256/eval_step_150000_decoded
-
     
     echo "Completed processing for target: $target"
     echo "----------------------------------------"
