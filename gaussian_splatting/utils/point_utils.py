@@ -32,7 +32,7 @@ def get_rays_single_image(H, W, intrinsics, c2w, render_stride=1):
         return rays_o, rays_d
 
 
-def get_point_clouds(cameras, depths, alphas, rgbs=None):
+def get_point_clouds(cameras, depths, alphas, rgbs=None, regularize_rays=False):
     """
     depth map to point cloud
     """
@@ -50,8 +50,10 @@ def get_point_clouds(cameras, depths, alphas, rgbs=None):
     print('mask', mask.shape)
     print('mask', mask.sum())
     # print("ray_d length", rays_d.norm(dim=-1))
-    # pts = rays_o + rays_d * depths.flatten(1).unsqueeze(-1)/rays_d.norm(p=2,dim=2,keepdim=True)
-    pts = rays_d * depths.flatten(1).unsqueeze(-1) + rays_o
+    if regularize_rays:
+        pts = rays_o + rays_d * depths.flatten(1).unsqueeze(-1)/rays_d.norm(p=2,dim=2,keepdim=True)
+    else:
+        pts = rays_o + rays_d * depths.flatten(1).unsqueeze(-1)
     # print('rays_d', rays_d.norm(p=2,dim=2,keepdim=True))
     rgbas = torch.cat([rgbs, alphas.unsqueeze(-1)], dim=-1)
     coords = pts[mask].cpu().numpy()
