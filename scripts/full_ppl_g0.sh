@@ -4,7 +4,7 @@ targets=("houseA" "shop")
 for target in "${targets[@]}"; do
     echo "Processing target: $target"
     
-    if [ ! -d "../decoded_result/${target}_64/eval_step_100000_decoded" ] || [ -z "$(ls -A ../decoded_result/${target}_64/eval_step_100000_decoded 2>/dev/null)" ]; then
+    if [ ! -d "../decoded_result/${target}_64/eval_step_150000_decoded" ] || [ -z "$(ls -A ../decoded_result/${target}_64/eval_step_150000_decoded 2>/dev/null)" ]; then
         python encode_with_vae.py \
         --input ../../objaverse_synthetic/${target}_processed_train \
         --output ../../objaverse_synthetic/${target}_processed_train/vae_latents_64 \
