@@ -4,7 +4,7 @@ targets=("cake" "")
 for target in "${targets[@]}"; do
     echo "Processing target: $target"
     
-    if [ ! -d "../decoded_result/${target}_64/eval_step_100000_decoded" ] || [ -z "$(ls -A ../decoded_result/${target}_64/eval_step_100000_decoded 2>/dev/null)" ] || [ ! -d "../decoded_result/${target}_64/eval_step_150000_decoded" ] || [ -z "$(ls -A ../decoded_result/${target}_64/eval_step_150000_decoded 2>/dev/null)" ]; then
+    if [ ! -d "../decoded_result/${target}_64/eval_step_100000_decoded" ] || [ -z "$(ls -A ../decoded_result/${target}_64/eval_step_100000_decoded 2>/dev/null)" ]; then
         python encode_with_vae.py \
         --input ../../objaverse_synthetic/${target}_processed_train \
         --output ../../objaverse_synthetic/${target}_processed_train/vae_latents_64 \
@@ -20,7 +20,7 @@ for target in "${targets[@]}"; do
         --output ../decoded_result/${target}_64/eval_step_100000_decoded
     fi
     
-    if [ ! -d "../decoded_result/${target}_128/eval_step_100000_decoded" ] || [ -z "$(ls -A ../decoded_result/${target}_128/eval_step_100000_decoded 2>/dev/null)" ] || [ ! -d "../decoded_result/${target}_128/eval_step_150000_decoded" ] || [ -z "$(ls -A ../decoded_result/${target}_128/eval_step_150000_decoded 2>/dev/null)" ]; then
+    if [ ! -d "../decoded_result/${target}_128/eval_step_100000_decoded" ] || [ -z "$(ls -A ../decoded_result/${target}_128/eval_step_100000_decoded 2>/dev/null)"]; then
         if [ ! -d "../../objaverse_synthetic/${target}_processed_train/vae_latents_128" ]; then
             python encode_with_vae.py \
             --input ../../objaverse_synthetic/${target}_processed_train \
@@ -39,7 +39,7 @@ for target in "${targets[@]}"; do
     fi
 
 
-    if [ ! -d "../decoded_result/${target}_256/eval_step_100000_decoded" ] || [ -z "$(ls -A ../decoded_result/${target}_256/eval_step_100000_decoded 2>/dev/null)" ] || [ ! -d "../decoded_result/${target}_256/eval_step_150000_decoded" ] || [ -z "$(ls -A ../decoded_result/${target}_256/eval_step_150000_decoded 2>/dev/null)" ]; then
+    if [ ! -d "../decoded_result/${target}_256/eval_step_100000_decoded" ] || [ -z "$(ls -A ../decoded_result/${target}_256/eval_step_100000_decoded 2>/dev/null)" ]; then
         if [ ! -d "../../objaverse_synthetic/${target}_processed_train/vae_latents_256" ]; then
         python encode_with_vae.py \
         --input ../../objaverse_synthetic/${target}_processed_train \
