@@ -1,5 +1,5 @@
 cd ../data-preprocess
-targets=("statue" "bus" "houseA" "shop")
+targets=("houseA" "shop")
 
 for target in "${targets[@]}"; do
     echo "Processing target: $target"
