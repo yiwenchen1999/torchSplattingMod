@@ -5,25 +5,35 @@
 
 cd ../data-preprocess
 
-# Target scene list
-targets=("statue" "bus" "houseA" "houseB" "shop" "atlus" "chair" "lizard" "lamp" "apron" "sofa" "cake" "cheeseplate")
+python encode_with_flux.py \
+    --input ../../nerf_synthetic/ship_latents_processed_test
+    --output ../../nerf_synthetic/ship_latents_processed_test/flux_latents_64 \
+    --flux black-forest-labs/FLUX.1-dev \
+    --size 512 \
+    --device cuda \
+    --fp16 \
+    --sample \
+    --save_meta
 
-for target in "${targets[@]}"; do
-    echo "Processing target: $target"
+# # Target scene list
+# targets=("statue" "bus" "houseA" "houseB" "shop" "atlus" "chair" "lizard" "lamp" "apron" "sofa" "cake" "cheeseplate")
+
+# for target in "${targets[@]}"; do
+#     echo "Processing target: $target"
     
-    # Use FLUX VAE to encode images to latent representations
-    python encode_with_flux.py \
-        --input ../../objaverse_synthetic/${target}_processed_train \
-        --output ../../objaverse_synthetic/${target}_processed_train/flux_latents_64 \
-        --flux black-forest-labs/FLUX.1-dev \
-        --size 512 \
-        --device cuda \
-        --fp16 \
-        --save_meta
+#     # Use FLUX VAE to encode images to latent representations
+#     python encode_with_flux.py \
+#         --input ../../objaverse_synthetic/${target}_processed_train \
+#         --output ../../objaverse_synthetic/${target}_processed_train/flux_latents_64 \
+#         --flux black-forest-labs/FLUX.1-dev \
+#         --size 512 \
+#         --device cuda \
+#         --fp16 \
+#         --save_meta
     
-    echo "Completed FLUX encoding for $target (64x64 latents)"
-    echo "----------------------------------------"
-done
+#     echo "Completed FLUX encoding for $target (64x64 latents)"
+#     echo "----------------------------------------"
+# done
 
 # Example usage comments:
 # Encode single scene:

@@ -62,6 +62,7 @@ def encode_image_flux(vae: AutoencoderKL, img_tensor: torch.Tensor, sample: bool
     
     # FLUX VAE scaling: (latents - shift_factor) * scaling_factor
     latents = (latents - vae.config.shift_factor) * vae.config.scaling_factor
+    print('latents', latents.shape, latents.dtype)
     
     return latents  # (1,4,H/8,W/8)
 
