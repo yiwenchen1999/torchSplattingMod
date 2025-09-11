@@ -16,12 +16,14 @@ def list_images(folder, exts=(".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", 
     p = Path(folder)
     return sorted([f for f in p.rglob("*") if f.suffix.lower() in exts])
 
-def load_vae(vae_repo: str = None, sd_repo: str = None, device="cuda", dtype=torch.float16):
+def load_vae(vae_repo: str = None, sd_repo: str = None, flux_repo: str = None, device="cuda", dtype=torch.float16):
     # Default: SD 1.5's bundled VAE
     if vae_repo:
         vae = AutoencoderKL.from_pretrained(vae_repo, torch_dtype=dtype)
     elif sd_repo:
         vae = AutoencoderKL.from_pretrained(sd_repo, subfolder="vae", torch_dtype=dtype)
+    elif flux_repo:
+        vae = AutoencoderKL.from_pretrained(flux_repo, subfolder="vae", torch_dtype=dtype)
     else:
         vae = AutoencoderKL.from_pretrained("runwayml/stable-diffusion-v1-5", subfolder="vae", torch_dtype=dtype)
     vae.to(device).eval()
@@ -60,10 +62,18 @@ def preprocess_rgba(image: Image.Image, size: int):
     return x.unsqueeze(0), mask_img  # (1,3,H,W), PIL(L)
 
 @torch.inference_mode()
-def encode_image(vae: AutoencoderKL, img_tensor: torch.Tensor, sample: bool = False):
+def encode_image(vae: AutoencoderKL, img_tensor: torch.Tensor, sample: bool = False, use_flux_scaling: bool = False):
     posterior = vae.encode(img_tensor).latent_dist
     latents = posterior.sample() if sample else posterior.mean
-    return latents * SCALE  # (1,4,H/8,W/8)
+    
+    if use_flux_scaling:
+        # FLUX VAE scaling: (latents - shift_factor) * scaling_factor
+        latents = (latents - vae.config.shift_factor) * vae.config.scaling_factor
+    else:
+        # SD VAE scaling
+        latents = latents * SCALE
+    
+    return latents  # (1,4,H/8,W/8)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -71,6 +81,7 @@ def main():
     parser.add_argument("--output", required=True, help="Output folder for .npy latents")
     parser.add_argument("--vae", default=None, help="Optional VAE repo/path")
     parser.add_argument("--sd", default=None, help="Optional SD repo/path; loads its /vae")
+    parser.add_argument("--flux", default=None, help="Optional FLUX repo/path; loads its /vae")
     parser.add_argument("--size", type=int, default=1024, help="Square size after resize+crop")
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--fp16", action="store_true", help="Force float16 inference/storage")
@@ -86,7 +97,10 @@ def main():
         return
 
     dtype = torch.float16 if args.device.startswith("cuda") or args.fp16 else torch.float32
-    vae = load_vae(args.vae, args.sd, device=args.device, dtype=dtype)
+    vae = load_vae(args.vae, args.sd, args.flux, device=args.device, dtype=dtype)
+    
+    # Determine if using FLUX scaling
+    use_flux_scaling = args.flux is not None
 
     for img_path in tqdm(images, desc="Encoding"):
         rel = Path(img_path).relative_to(args.input)
@@ -106,7 +120,7 @@ def main():
         x = x.to(args.device, dtype=dtype)
 
         # Encode
-        latents = encode_image(vae, x, sample=args.sample).squeeze(0)  # (4,h,w) on device
+        latents = encode_image(vae, x, sample=args.sample, use_flux_scaling=use_flux_scaling).squeeze(0)  # (4,h,w) on device
         h, w = latents.shape[-2], latents.shape[-1]
 
         # Save latent
@@ -130,9 +144,11 @@ def main():
                 "latent_shape": [4, h, w],
                 "mask_shape": [h, w],
                 "dtype": "float16" if dtype == torch.float16 else "float32",
-                "scale_factor": SCALE,
+                "scale_factor": SCALE if not use_flux_scaling else vae.config.scaling_factor,
+                "shift_factor": None if not use_flux_scaling else vae.config.shift_factor,
+                "vae_type": "flux" if use_flux_scaling else "sd",
                 "mode": "sample" if args.sample else "mean",
-                "vae": args.vae or (args.sd + "/vae" if args.sd else "runwayml/stable-diffusion-v1-5/vae"),
+                "vae": args.vae or (args.sd + "/vae" if args.sd else (args.flux + "/vae" if args.flux else "runwayml/stable-diffusion-v1-5/vae")),
                 "mask_note": "mask is 1 where input alpha>0, resized with nearest to latent resolution",
             }
             with open(out_base.with_suffix(".json"), "w") as f:

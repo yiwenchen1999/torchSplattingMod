@@ -15,12 +15,14 @@ def list_latents(folder):
     p = Path(folder)
     return sorted([f for f in p.rglob("*") if f.suffix.lower() == ".npy" and not f.stem.endswith("_mask")])
 
-def load_vae(vae_repo: str = None, sd_repo: str = None, device="cuda", dtype=torch.float16):
+def load_vae(vae_repo: str = None, sd_repo: str = None, flux_repo: str = None, device="cuda", dtype=torch.float16):
     # Default: SD 1.5's bundled VAE
     if vae_repo:
         vae = AutoencoderKL.from_pretrained(vae_repo, torch_dtype=dtype)
     elif sd_repo:
         vae = AutoencoderKL.from_pretrained(sd_repo, subfolder="vae", torch_dtype=dtype)
+    elif flux_repo:
+        vae = AutoencoderKL.from_pretrained(flux_repo, subfolder="vae", torch_dtype=dtype)
     else:
         vae = AutoencoderKL.from_pretrained("runwayml/stable-diffusion-v1-5", subfolder="vae", torch_dtype=dtype)
     vae.to(device).eval()
@@ -33,8 +35,13 @@ def tensor_to_pil(t: torch.Tensor) -> Image.Image:
     return Image.fromarray(t)
 
 @torch.inference_mode()
-def decode_latents(vae: AutoencoderKL, latents: torch.Tensor):
-    latents = latents / SCALE
+def decode_latents(vae: AutoencoderKL, latents: torch.Tensor, use_flux_scaling: bool = False):
+    if use_flux_scaling:
+        # FLUX VAE decoding: latents / scaling_factor + shift_factor
+        latents = latents / vae.config.scaling_factor + vae.config.shift_factor
+    else:
+        # SD VAE decoding
+        latents = latents / SCALE
     return vae.decode(latents).sample  # (1,3, 8*h, 8*w) in [-1,1]
 
 def overlay_mask(img: Image.Image, mask_up_np: np.ndarray, alpha: float = 0.35, color=(0, 255, 0)) -> Image.Image:
@@ -62,6 +69,7 @@ def main():
     parser.add_argument("--output", required=True, help="Output folder for decoded images and mask viz")
     parser.add_argument("--vae", default=None, help="Optional VAE repo/path")
     parser.add_argument("--sd", default=None, help="Optional SD repo/path; uses /vae")
+    parser.add_argument("--flux", default=None, help="Optional FLUX repo/path; uses /vae")
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--fp16", action="store_true", help="Force float16 inference")
     parser.add_argument("--ext", default=".png", choices=[".png", ".jpg", ".webp"])
@@ -75,7 +83,12 @@ def main():
         return
 
     dtype = torch.float16 if args.device.startswith("cuda") or args.fp16 else torch.float32
-    vae = load_vae(args.vae, args.sd, device=args.device, dtype=dtype)
+    vae = load_vae(args.vae, args.sd, args.flux, device=args.device, dtype=dtype)
+    
+    # Determine if using FLUX scaling
+    #todo: toggle on and off to check the righ recipe fo flux scaling
+    use_flux_scaling = False
+    # use_flux_scaling = args.flux is not False
 
     for lat_path in tqdm(latents_files, desc="Decoding"):   
         # if 'image' not in lat_path.name:
@@ -98,7 +111,7 @@ def main():
         print(f"Decoding {lat_path} -> {out_img}")
         print("latent shape:", lat.shape)
         # lat = einops.rearrange(lat, "b h w c -> b c h w")  # (1, h, w, 4)
-        img_tensor = decode_latents(vae, lat)   # (1,3, 8*h, 8*w)
+        img_tensor = decode_latents(vae, lat, use_flux_scaling=use_flux_scaling)   # (1,3, 8*h, 8*w)
         img = tensor_to_pil(img_tensor)
         img.save(out_img)
 

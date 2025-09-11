@@ -49,3 +49,12 @@ for target in "${targets[@]}"; do
     echo "----------------------------------------"
 done
 
+#& encoding with flux
+# python data-preprocess/encode_with_vae.py \
+#     --input /path/to/images \
+#     --output /path/to/latents \
+#     --flux black-forest-labs/FLUX.1-dev \
+#     --size 1024 \
+#     --device cuda \
+#     --fp16
+
