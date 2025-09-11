@@ -85,7 +85,7 @@ class GSSTrainer(Trainer):
                 camera = to_viewpoint_camera(camera)
             
             rgb = self.data['rgb'][ind].detach().cpu().numpy()
-            out = self.gaussRender(pc=self.model, camera=camera, latent_model=self.latent_model, feature_dim=self.model.feature_dim)
+            out = self.gaussRender(pc=self.model, camera=camera, latent_model=self.latent_model, feature_dim=self.model.feature_dim, feature_dim=self.model.feature_dim)
             rgb_pd = out['render'].detach().cpu().numpy()[..., :3]
             depth_pd = out['depth'].detach().cpu().numpy()[..., 0]
             depth = self.data['depth'][ind].detach().cpu().numpy()
@@ -140,7 +140,7 @@ class GSSTrainer(Trainer):
             # if self.latent_model:
             #     camera.image_width = 64
             #     camera.image_height = 64
-            out = self.gaussRender(pc=self.model, camera=camera, latent_model=self.latent_model)
+            out = self.gaussRender(pc=self.model, camera=camera, latent_model=self.latent_model, feature_dim=self.model.feature_dim)
 
         if USE_PROFILE:
             print(prof.key_averages(group_by_stack_n=True).table(sort_by='self_cuda_time_total', row_limit=20))
@@ -271,6 +271,8 @@ if __name__ == "__main__":
                        help='Image size for training')
     parser.add_argument('--input_folder', type=str, default=None, required=False,
                         help='specify what folder to use')
+    parser.add_argument('--feature_dim', type=int, default=4,
+                       help='Feature dimension for training')
     
     args = parser.parse_args()
     
@@ -300,7 +302,7 @@ if __name__ == "__main__":
     raw_points = points.random_sample(2**14)
     # raw_points.write_ply(open('points.ply', 'wb'))
 
-    gaussModel = GaussModel(sh_degree=4, debug=False, latent_model=latent_model)
+    gaussModel = GaussModel(sh_degree=4, debug=False, latent_model=latent_model, feature_dim=args.feature_dim)
     gaussModel.create_from_pcd(pcd=raw_points)
     
     render_kwargs = {

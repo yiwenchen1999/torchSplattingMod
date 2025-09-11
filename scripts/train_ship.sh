@@ -3,6 +3,7 @@ python train_latents.py \
 --input_folder ../nerf_synthetic/ship_latents_processed_test \
 --scene_name ship_latents_flux64 \
 --image_size 64
+--feature_dim 16
 
 cd ../data-preprocess
 python decode_with_vae.py \
