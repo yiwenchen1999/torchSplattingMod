@@ -142,6 +142,8 @@ def main():
 
     os.makedirs(args.output, exist_ok=True)
     images = list_images(args.input)
+    # 只处理不在任何子文件夹中的图像
+    images = [img for img in images if img.parent == Path(args.input)]
     if not images:
         print(f"No images found in {args.input}")
         return
