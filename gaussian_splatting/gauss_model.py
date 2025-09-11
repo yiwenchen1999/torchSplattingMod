@@ -40,7 +40,7 @@ class GaussModel(nn.Module):
 
         self.rotation_activation = torch.nn.functional.normalize
     
-    def __init__(self, sh_degree : int=3, debug=False, latent_model=False):
+    def __init__(self, sh_degree : int=3, debug=False, latent_model=False, feature_dim=4):
         super(GaussModel, self).__init__()
         self.max_sh_degree = sh_degree  
         self._xyz = torch.empty(0)
@@ -52,6 +52,7 @@ class GaussModel(nn.Module):
         self.setup_functions()
         self.debug = debug
         self.latent_model = latent_model
+        self.feature_dim = feature_dim
 
     def create_from_pcd(self, pcd:PointCloud):
         """
@@ -66,7 +67,7 @@ class GaussModel(nn.Module):
         print("Number of points at initialisation : ", fused_point_cloud.shape[0])
         print('is latent model', self.latent_model)
         if self.latent_model:
-            features = torch.zeros((fused_color.shape[0], 4, (self.max_sh_degree + 1) ** 2)).float().cuda()
+            features = torch.zeros((fused_color.shape[0], self.feature_dim, (self.max_sh_degree + 1) ** 2)).float().cuda()
             features[:, :3, 0 ] = fused_color
             features[:, 3:, 1:] = 0.0
         else:

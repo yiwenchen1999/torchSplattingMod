@@ -171,11 +171,11 @@ class GaussRenderer(nn.Module):
         #^ color = (color + 0.5).clip(min=0.0)
         return color
     
-    def render(self, camera, means2D, cov2d, color, opacity, depths, latent_model=False):
+    def render(self, camera, means2D, cov2d, color, opacity, depths, latent_model=False, feature_dim=4):
         radii = get_radius(cov2d)
         rect = get_rect(means2D, radii, width=camera.image_width, height=camera.image_height)
         if latent_model:
-            self.render_color = torch.ones(*self.pix_coord.shape[:2], 4).to('cuda')
+            self.render_color = torch.ones(*self.pix_coord.shape[:2], feature_dim).to('cuda')
         else:   
             self.render_color = torch.ones(*self.pix_coord.shape[:2], 3).to('cuda')
         self.render_depth = torch.zeros(*self.pix_coord.shape[:2], 1).to('cuda')
@@ -229,7 +229,7 @@ class GaussRenderer(nn.Module):
         }
 
 
-    def forward(self, camera, pc, latent_model=False, **kwargs):
+    def forward(self, camera, pc, latent_model=False, feature_dim=4, **kwargs):
         means3D = pc.get_xyz
         opacity = pc.get_opacity
         scales = pc.get_scaling
@@ -279,7 +279,8 @@ class GaussRenderer(nn.Module):
                 color=color,
                 opacity=opacity, 
                 depths=depths,
-                latent_model=latent_model
+                latent_model=latent_model,
+                feature_dim=feature_dim
             )
 
         return rets
