@@ -9,6 +9,7 @@ from PIL import Image
 from tqdm import tqdm
 import torchvision.transforms.functional as TF
 from diffusers import AutoencoderKL
+import cv2
 
 def list_images(folder, exts=(".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff")):
     p = Path(folder)
@@ -34,24 +35,84 @@ def resize_center_crop(img: Image.Image, size: int) -> Image.Image:
     top = (res.height - size) // 2
     return res.crop((left, top, left + size, top + size))
 
-def preprocess_rgba(image: Image.Image, size: int):
+def preprocess_rgba_opencv(image_path: str, size: int):
     """
-    Preprocess RGBA image
+    Preprocess RGBA image using OpenCV, multiply RGB with alpha values
     Returns:
-      x: (1,3,H,W) in [-1,1]
-      mask_img: PIL 'L' (H,W) binary mask (255 where alpha>0)
+      x: (1,3,H,W) in [-1,1] with RGB multiplied by alpha
+      alpha_img: PIL 'L' (H,W) alpha channel for reference
     """
-    if image.mode != "RGBA":
-        image = image.convert("RGBA")
-    rgba = resize_center_crop(image, size)
-    r, g, b, a = rgba.split()
-    rgb = Image.merge("RGB", (r, g, b))
-    x = TF.to_tensor(rgb) * 2.0 - 1.0  # (3,H,W) [-1,1]
-    # mask: 1 where alpha>0
-    a_np = np.array(a, dtype=np.uint8)
-    mask_np = (a_np > 0).astype(np.uint8) * 255
-    mask_img = Image.fromarray(mask_np, mode="L")
-    return x.unsqueeze(0), mask_img  # (1,3,H,W), PIL(L)
+    # Load with OpenCV
+    img_bgr = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+    if img_bgr is None:
+        raise ValueError(f"Could not load image: {image_path}")
+    
+    # Check if image has alpha channel
+    if len(img_bgr.shape) == 3 and img_bgr.shape[2] == 4:
+        b, g, r, a = cv2.split(img_bgr)
+        
+    elif len(img_bgr.shape) == 3 and img_bgr.shape[2] == 3:
+        # Create a fully opaque alpha channel
+        h, w = img_bgr.shape[:2]
+        a = np.ones((h, w), dtype=np.uint8) * 255
+        b, g, r = cv2.split(img_bgr)
+        
+    else:
+        # Grayscale image
+        h, w = img_bgr.shape[:2]
+        a = np.ones((h, w), dtype=np.uint8) * 255
+        b = g = r = img_bgr
+    
+    # Resize and center crop using OpenCV
+    h, w = img_bgr.shape[:2]
+    if w == h:
+        # Already square, just resize
+        r_resized = cv2.resize(r, (size, size), interpolation=cv2.INTER_CUBIC)
+        g_resized = cv2.resize(g, (size, size), interpolation=cv2.INTER_CUBIC)
+        b_resized = cv2.resize(b, (size, size), interpolation=cv2.INTER_CUBIC)
+        a_resized = cv2.resize(a, (size, size), interpolation=cv2.INTER_CUBIC)
+    else:
+        # Resize maintaining aspect ratio
+        if w < h:
+            new_w, new_h = size, int(round(h * size / w))
+        else:
+            new_w, new_h = int(round(w * size / h)), size
+        
+        r_resized = cv2.resize(r, (new_w, new_h), interpolation=cv2.INTER_CUBIC)
+        g_resized = cv2.resize(g, (new_w, new_h), interpolation=cv2.INTER_CUBIC)
+        b_resized = cv2.resize(b, (new_w, new_h), interpolation=cv2.INTER_CUBIC)
+        a_resized = cv2.resize(a, (new_w, new_h), interpolation=cv2.INTER_CUBIC)
+        
+        # Center crop
+        start_x = (new_w - size) // 2
+        start_y = (new_h - size) // 2
+        r_resized = r_resized[start_y:start_y+size, start_x:start_x+size]
+        g_resized = g_resized[start_y:start_y+size, start_x:start_x+size]
+        b_resized = b_resized[start_y:start_y+size, start_x:start_x+size]
+        a_resized = a_resized[start_y:start_y+size, start_x:start_x+size]
+    
+    # Convert to float32 for processing
+    r_float = r_resized.astype(np.float32) / 255.0
+    g_float = g_resized.astype(np.float32) / 255.0
+    b_float = b_resized.astype(np.float32) / 255.0
+    a_float = a_resized.astype(np.float32) / 255.0
+    
+    # Multiply RGB with alpha values
+    r_multiplied = (r_float * a_float * 255).astype(np.uint8)
+    g_multiplied = (g_float * a_float * 255).astype(np.uint8)
+    b_multiplied = (b_float * a_float * 255).astype(np.uint8)
+    
+    # Create RGB image with alpha multiplication
+    rgb_multiplied = np.stack([r_multiplied, g_multiplied, b_multiplied], axis=2)
+    rgb_pil = Image.fromarray(rgb_multiplied.astype(np.uint8))
+    
+    # Convert to tensor
+    x = TF.to_tensor(rgb_pil) * 2.0 - 1.0  # (3,H,W) [-1,1]
+    
+    # Save alpha channel for reference
+    alpha_img = Image.fromarray(a_resized, mode="L")
+    
+    return x.unsqueeze(0), alpha_img  # (1,3,H,W), PIL(L)
 
 @torch.inference_mode()
 def encode_image_flux(vae: AutoencoderKL, img_tensor: torch.Tensor, sample: bool = False):
@@ -102,11 +163,12 @@ def main():
         if out_latent.exists() and out_mask.exists() and not args.overwrite:
             continue
 
+        # Get original image size for metadata
         img = Image.open(img_path)
         W0, H0 = img.size  # original size
 
-        # Preprocess to square, keep alpha mask
-        x, mask_img = preprocess_rgba(img, size=args.size)  # x:(1,3,H,W), mask PIL(L)
+        # Preprocess using OpenCV with alpha multiplication
+        x, alpha_img = preprocess_rgba_opencv(str(img_path), size=args.size)  # x:(1,3,H,W), alpha PIL(L)
         x = x.to(args.device, dtype=dtype)
 
         # Encode
@@ -118,13 +180,13 @@ def main():
         print(f'Latent shape: {lat_cpu.shape}, dtype: {lat_cpu.dtype}')
         np.save(out_latent, lat_cpu.half().numpy() if dtype == torch.float16 else lat_cpu.numpy())
 
-        # Downscale mask to latent resolution and save
-        mask_tensor = TF.to_tensor(mask_img).unsqueeze(0).to(args.device)  # (1,1,H,W) in [0,1]
-        mask_bin = (mask_tensor > 0).to(torch.float32)                     # strict alpha>0
-        # Map full-resolution mask to latent HxW with OR semantics
-        mask_down = torch.nn.functional.adaptive_max_pool2d(mask_bin, output_size=(h, w))  # (1,1,h,w)
-        mask_np = (mask_down.squeeze(0).squeeze(0).detach().cpu().numpy() > 0).astype(np.uint8)
-        np.save(out_mask, mask_np)
+        # # Downscale alpha channel to latent resolution and save
+        # alpha_tensor = TF.to_tensor(alpha_img).unsqueeze(0).to(args.device)  # (1,1,H,W) in [0,1]
+        # alpha_bin = (alpha_tensor > 0).to(torch.float32)                     # strict alpha>0
+        # # Map full-resolution alpha to latent HxW with OR semantics
+        # alpha_down = torch.nn.functional.adaptive_max_pool2d(alpha_bin, output_size=(h, w))  # (1,1,h,w)
+        # alpha_np = (alpha_down.squeeze(0).squeeze(0).detach().cpu().numpy() > 0).astype(np.uint8)
+        # np.save(out_mask, alpha_np)
 
         if args.save_meta:
             meta = {
@@ -139,7 +201,8 @@ def main():
                 "vae_type": "flux",
                 "mode": "sample" if args.sample else "mean",
                 "vae": args.flux,
-                "mask_note": "mask is 1 where input alpha>0, resized with nearest to latent resolution",
+                "mask_note": "mask is 1 where input alpha>0, resized with adaptive max pool to latent resolution",
+                "preprocessing": "opencv_alpha_multiplication",
             }
             with open(out_base.with_suffix(".json"), "w") as f:
                 json.dump(meta, f, indent=2)
