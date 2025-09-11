@@ -2,6 +2,7 @@
 """
 Script to process RGBA images and save blended RGB images with alpha multiplication
 Replaces RGBA images with RGB images where RGB values are multiplied by alpha values
+Automatically skips images with "depth" or "alpha" in their filenames
 """
 
 import argparse
@@ -13,9 +14,18 @@ from pathlib import Path
 from tqdm import tqdm
 
 def list_images(folder, exts=(".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff")):
-    """List all image files in folder"""
+    """List all image files in folder, excluding depth and alpha images"""
     p = Path(folder)
-    return sorted([f for f in p.rglob("*") if f.suffix.lower() in exts])
+    all_images = [f for f in p.rglob("*") if f.suffix.lower() in exts]
+    
+    # Filter out images with "depth" or "alpha" in their names
+    filtered_images = []
+    for img in all_images:
+        img_name_lower = img.name.lower()
+        if "depth" not in img_name_lower and "alpha" not in img_name_lower:
+            filtered_images.append(img)
+    
+    return sorted(filtered_images)
 
 def blend_rgba_image(image_path: str, output_path: str = None):
     """
@@ -111,7 +121,7 @@ def process_folder(input_folder: str, output_folder: str = None, overwrite: bool
         print(f"No images found in {input_folder}")
         return
     
-    print(f"Found {len(images)} images to process")
+    print(f"Found {len(images)} images to process (excluding depth and alpha images)")
     
     # Process each image
     success_count = 0
