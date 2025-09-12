@@ -291,7 +291,7 @@ if __name__ == "__main__":
     # folder = 'B075X65R3X'
     # scene_name = 'chair_rgb'
     latent_model = True
-    data = read_all(folder, resize_factor=2*image_size/512.0, latent_model=latent_model, image_size=image_size)
+    data = read_all(folder, resize_factor=4*image_size/512.0, latent_model=latent_model, image_size=image_size)
     data = {k: v.to(device) for k, v in data.items()}
     data['depth_range'] = torch.Tensor([[1,3]]*len(data['rgb'])).to(device)
 
