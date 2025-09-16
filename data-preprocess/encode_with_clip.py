@@ -126,6 +126,7 @@ def encode_image_clip(model, preprocess, img_pil: Image.Image, device="cuda", dt
         print(f'[DEBUG] Visual encoder device: {next(visual_encoder.parameters()).device}')
         print(f'[DEBUG] Visual encoder dtype: {next(visual_encoder.parameters()).dtype}')
         
+        
         # Check conv1 layer specifically
         conv1_weight_dtype = visual_encoder.conv1.weight.dtype
         conv1_bias_dtype = visual_encoder.conv1.bias.dtype if visual_encoder.conv1.bias is not None else None
@@ -135,6 +136,9 @@ def encode_image_clip(model, preprocess, img_pil: Image.Image, device="cuda", dt
         # Forward through the visual encoder to get intermediate features
         # All components should now be float32
         print(f'[DEBUG] Starting forward pass through conv1...')
+        if img_tensor.dtype != conv1_weight_dtype:
+            print(f'[DEBUG] Converting img_tensor from {img_tensor.dtype} to {conv1_weight_dtype}')
+            img_tensor = img_tensor.to(dtype=conv1_weight_dtype)
         x = visual_encoder.conv1(img_tensor)  # shape = [*, width, grid, grid]
         print(f'[DEBUG] After conv1 - x shape: {x.shape}, dtype: {x.dtype}')
         x = x.reshape(x.shape[0], x.shape[1], -1)  # shape = [*, width, grid ** 2]
