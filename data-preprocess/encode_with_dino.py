@@ -19,11 +19,7 @@ def load_dino_model(model_name: str = "facebook/dinov3-vitl16-pretrain-lvd1689m"
     """Load DINOv3 model and processor"""
     processor = AutoImageProcessor.from_pretrained(model_name)
     model = AutoModel.from_pretrained(model_name)
-    # Ensure model uses the correct dtype consistently
-    if dtype == torch.float16:
-        model = model.half()
-    else:
-        model = model.float()  # Explicitly set to float32
+    # Keep model in its original precision to avoid dtype conflicts
     model.to(device).eval()
     return model, processor
 
@@ -122,7 +118,8 @@ def encode_image_dino(model, processor, img_pil: Image.Image, device="cuda", dty
     """Encode image using DINOv3 and return feature maps"""
     # Preprocess image using DINO's processor
     inputs = processor(images=img_pil, return_tensors="pt")
-    pixel_values = inputs.pixel_values.to(device, dtype=dtype)  # (1, 3, 224, 224)
+    # Convert input to match model's expected dtype
+    pixel_values = inputs.pixel_values.to(device, dtype=next(model.parameters()).dtype)  # (1, 3, 224, 224)
     
     # Get features from DINOv3
     with torch.no_grad():

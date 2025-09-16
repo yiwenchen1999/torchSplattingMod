@@ -18,11 +18,7 @@ def list_images(folder, exts=(".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", 
 def load_clip_model(model_name: str = "ViT-L/14", device="cuda", dtype=torch.float32):
     """Load CLIP model and return both model and preprocess function"""
     model, preprocess = clip.load(model_name, device=device)
-    # Ensure model uses the correct dtype consistently
-    if dtype == torch.float16:
-        model = model.half()
-    else:
-        model = model.float()  # Explicitly set to float32
+    # Keep model in its original precision to avoid dtype conflicts
     model.eval()
     return model, preprocess
 
@@ -124,14 +120,13 @@ def encode_image_clip(model, preprocess, img_pil: Image.Image, device="cuda", dt
     
     # Get features from the visual encoder
     with torch.no_grad():
-        # Forward pass through the visual encoder
-        image_features = model.encode_image(img_tensor)
-        
-        # Get the last layer features from the ViT
-        # The visual encoder is a ViT, we need to access its last layer
+        # Get the visual encoder directly
         visual_encoder = model.visual
         
         # Forward through the visual encoder to get intermediate features
+        # Convert input to match model's expected dtype
+        img_tensor = img_tensor.to(dtype=next(visual_encoder.parameters()).dtype)
+        
         x = visual_encoder.conv1(img_tensor)  # shape = [*, width, grid, grid]
         x = x.reshape(x.shape[0], x.shape[1], -1)  # shape = [*, width, grid ** 2]
         x = x.permute(0, 2, 1)  # shape = [*, grid ** 2, width]
