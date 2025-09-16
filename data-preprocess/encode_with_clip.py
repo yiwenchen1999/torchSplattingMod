@@ -15,12 +15,10 @@ def list_images(folder, exts=(".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", 
     p = Path(folder)
     return sorted([f for f in p.rglob("*") if f.suffix.lower() in exts])
 
-def load_clip_model(model_name: str = "ViT-L/14", device="cuda", dtype=torch.float16):
+def load_clip_model(model_name: str = "ViT-L/14", device="cuda", dtype=torch.float32):
     """Load CLIP model and return both model and preprocess function"""
     model, preprocess = clip.load(model_name, device=device)
     # Convert model to half precision for consistency
-    if dtype == torch.float16:
-        model = model.half()
     model.eval()
     return model, preprocess
 
@@ -115,7 +113,7 @@ def preprocess_rgba_opencv(image_path: str, size: int):
     return rgb_pil, alpha_img
 
 @torch.inference_mode()
-def encode_image_clip(model, preprocess, img_pil: Image.Image, device="cuda", dtype=torch.float16):
+def encode_image_clip(model, preprocess, img_pil: Image.Image, device="cuda", dtype=torch.float32):
     """Encode image using CLIP ViT and return last layer feature maps"""
     # Preprocess image using CLIP's preprocessing
     img_tensor = preprocess(img_pil).unsqueeze(0).to(device, dtype=dtype)  # (1, 3, 224, 224)
@@ -135,7 +133,7 @@ def encode_image_clip(model, preprocess, img_pil: Image.Image, device="cuda", dt
         print(f'[DEBUG] Conv1 bias dtype: {conv1_bias_dtype}')
         
         # Forward through the visual encoder to get intermediate features
-        # All components should now be float16
+        # All components should now be float32
         print(f'[DEBUG] Starting forward pass through conv1...')
         x = visual_encoder.conv1(img_tensor)  # shape = [*, width, grid, grid]
         print(f'[DEBUG] After conv1 - x shape: {x.shape}, dtype: {x.dtype}')
@@ -160,6 +158,7 @@ def encode_image_clip(model, preprocess, img_pil: Image.Image, device="cuda", dt
         ln_pre_bias_dtype = visual_encoder.ln_pre.bias.dtype
         print(f'[DEBUG] LN_pre weight dtype: {ln_pre_weight_dtype}')
         print(f'[DEBUG] LN_pre bias dtype: {ln_pre_bias_dtype}')
+        print(f'[DEBUG] x weight: {x.dtype}')
         x = visual_encoder.ln_pre(x)
         print(f'[DEBUG] After ln_pre - x shape: {x.shape}, dtype: {x.dtype}')
         
@@ -216,7 +215,7 @@ def main():
         print(f"No images found in {args.input}")
         return
 
-    dtype = torch.float16 if args.device.startswith("cuda") or args.fp16 else torch.float16
+    dtype = torch.float32 if args.device.startswith("cuda") or args.fp16 else torch.float32
     model, preprocess = load_clip_model(args.model, device=args.device, dtype=dtype)
     
     print(f"Using CLIP model: {args.model}")
@@ -246,7 +245,7 @@ def main():
         # Save features
         feat_cpu = features.to("cpu")
         print(f'CLIP features shape: {feat_cpu.shape}, dtype: {feat_cpu.dtype}')
-        np.save(out_features, feat_cpu.half().numpy() if dtype == torch.float16 else feat_cpu.numpy())
+        np.save(out_features, feat_cpu.numpy())
 
         # Downscale alpha channel to feature resolution and save
         alpha_tensor = TF.to_tensor(alpha_img).unsqueeze(0).to(args.device)  # (1,1,H,W) in [0,1]
