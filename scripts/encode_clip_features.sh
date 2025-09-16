@@ -11,4 +11,5 @@ python encode_with_clip.py \
     --model ViT-L/14 \
     --size 224 \
     --device cuda \
+    --fp16 \
     --save_meta

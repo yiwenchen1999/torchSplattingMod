@@ -15,10 +15,12 @@ def list_images(folder, exts=(".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", 
     p = Path(folder)
     return sorted([f for f in p.rglob("*") if f.suffix.lower() in exts])
 
-def load_clip_model(model_name: str = "ViT-L/14", device="cuda", dtype=torch.float32):
+def load_clip_model(model_name: str = "ViT-L/14", device="cuda", dtype=torch.float16):
     """Load CLIP model and return both model and preprocess function"""
     model, preprocess = clip.load(model_name, device=device)
-    # Keep model in its original precision to avoid dtype conflicts
+    # Convert model to half precision for consistency
+    if dtype == torch.float16:
+        model = model.half()
     model.eval()
     return model, preprocess
 
@@ -113,7 +115,7 @@ def preprocess_rgba_opencv(image_path: str, size: int):
     return rgb_pil, alpha_img
 
 @torch.inference_mode()
-def encode_image_clip(model, preprocess, img_pil: Image.Image, device="cuda", dtype=torch.float32):
+def encode_image_clip(model, preprocess, img_pil: Image.Image, device="cuda", dtype=torch.float16):
     """Encode image using CLIP ViT and return last layer feature maps"""
     # Preprocess image using CLIP's preprocessing
     img_tensor = preprocess(img_pil).unsqueeze(0).to(device, dtype=dtype)  # (1, 3, 224, 224)
@@ -133,12 +135,7 @@ def encode_image_clip(model, preprocess, img_pil: Image.Image, device="cuda", dt
         print(f'[DEBUG] Conv1 bias dtype: {conv1_bias_dtype}')
         
         # Forward through the visual encoder to get intermediate features
-        # Convert input to match model's expected dtype
-        model_dtype = next(visual_encoder.parameters()).dtype
-        print(f'[DEBUG] Converting input from {img_tensor.dtype} to {model_dtype}')
-        img_tensor = img_tensor.to(dtype=model_dtype)
-        print(f'[DEBUG] After conversion - img_tensor dtype: {img_tensor.dtype}')
-        
+        # All components should now be float16
         print(f'[DEBUG] Starting forward pass through conv1...')
         x = visual_encoder.conv1(img_tensor)  # shape = [*, width, grid, grid]
         print(f'[DEBUG] After conv1 - x shape: {x.shape}, dtype: {x.dtype}')
@@ -171,6 +168,9 @@ def encode_image_clip(model, preprocess, img_pil: Image.Image, device="cuda", dt
         
         # Transformer layers
         print(f'[DEBUG] Starting transformer forward pass...')
+        first_transformer_layer = visual_encoder.transformer.resblocks[0]
+        transformer_weight_dtype = first_transformer_layer.attn.in_proj_weight.dtype
+        print(f'[DEBUG] Transformer layer weight dtype: {transformer_weight_dtype}')
         x = visual_encoder.transformer(x)
         print(f'[DEBUG] After transformer - x shape: {x.shape}, dtype: {x.dtype}')
         
@@ -216,7 +216,7 @@ def main():
         print(f"No images found in {args.input}")
         return
 
-    dtype = torch.float16 if args.device.startswith("cuda") or args.fp16 else torch.float32
+    dtype = torch.float16 if args.device.startswith("cuda") or args.fp16 else torch.float16
     model, preprocess = load_clip_model(args.model, device=args.device, dtype=dtype)
     
     print(f"Using CLIP model: {args.model}")
