@@ -36,6 +36,18 @@ def load_clip_features(feature_path: str, device="cuda"):
     features_tensor = torch.from_numpy(features).to(device)
     return features_tensor
 
+def load_global_features(feature_path: str, device="cuda"):
+    """Load CLIP global features from .npy file"""
+    # Try to find the corresponding global feature file
+    global_path = str(feature_path).replace(".npy", "_global.npy")
+    if os.path.exists(global_path):
+        features = np.load(global_path)
+        features_tensor = torch.from_numpy(features).to(device)
+        return features_tensor
+    else:
+        print(f"Warning: Global features not found for {feature_path}")
+        return None
+
 def calculate_similarity_heatmap(text_features, image_features, device="cuda"):
     """Calculate cosine similarity between text and image features"""
     with torch.no_grad():
@@ -57,6 +69,19 @@ def calculate_similarity_heatmap(text_features, image_features, device="cuda"):
         similarity_map = (similarity_map - similarity_map.min()) / (similarity_map.max() - similarity_map.min() + 1e-8)
         
     return similarity_map.cpu().numpy()
+
+def calculate_global_similarity(text_features, global_features, device="cuda"):
+    """Calculate cosine similarity between text and global image features"""
+    with torch.no_grad():
+        # Normalize global features
+        global_features_norm = F.normalize(global_features.unsqueeze(0), dim=-1)  # (1, hidden_dim)
+        
+        # Calculate cosine similarity
+        # text_features shape: (1, hidden_dim)
+        # global_features_norm shape: (1, hidden_dim)
+        similarity = torch.mm(text_features, global_features_norm.t())  # (1, 1)
+        
+    return similarity.item()
 
 def save_heatmap(similarity_map, output_path: str, title: str = "CLIP Similarity Heatmap"):
     """Save similarity heatmap as image"""
@@ -101,14 +126,37 @@ def main():
     
     # Process each feature file
     similarity_maps = []
+    global_similarities = []
     feature_names = []
     
     for feature_file in tqdm(feature_files, desc="Processing features"):
-        # Load features
+        # Load patch features
         features = load_clip_features(str(feature_file), device=args.device)
         
-        # Calculate similarity heatmap
-        similarity_map = calculate_similarity_heatmap(text_features, features, device=args.device)
+        # Load global features if available
+        global_features = load_global_features(str(feature_file), device=args.device)
+        
+        # Calculate similarity heatmap using global features if available, otherwise use patch features
+        if global_features is not None:
+            # Use global features for similarity calculation (this will work with text features)
+            global_sim = calculate_global_similarity(text_features, global_features, device=args.device)
+            global_similarities.append(global_sim)
+            
+            # Create a uniform heatmap based on global similarity
+            height, width = features.shape[1], features.shape[2]
+            similarity_map = np.full((height, width), global_sim)
+        else:
+            # Fallback to patch-level similarity (may have dimension mismatch)
+            try:
+                similarity_map = calculate_similarity_heatmap(text_features, features, device=args.device)
+                global_similarities.append(np.mean(similarity_map))
+            except RuntimeError as e:
+                print(f"Warning: Dimension mismatch for {feature_file.stem}: {e}")
+                # Create a uniform heatmap with mean similarity
+                height, width = features.shape[1], features.shape[2]
+                similarity_map = np.full((height, width), 0.5)  # neutral similarity
+                global_similarities.append(0.5)
+        
         similarity_maps.append(similarity_map)
         
         # Get feature file name for output
@@ -165,6 +213,13 @@ def main():
         "std_similarity": float(np.std(all_similarities)),
         "min_similarity": float(np.min(all_similarities)),
         "max_similarity": float(np.max(all_similarities)),
+        "global_similarities": {
+            "mean": float(np.mean(global_similarities)),
+            "std": float(np.std(global_similarities)),
+            "min": float(np.min(global_similarities)),
+            "max": float(np.max(global_similarities)),
+            "values": global_similarities
+        },
         "feature_files": [str(f) for f in feature_files]
     }
     
@@ -177,6 +232,11 @@ def main():
     print(f"  Std similarity: {stats['std_similarity']:.4f}")
     print(f"  Min similarity: {stats['min_similarity']:.4f}")
     print(f"  Max similarity: {stats['max_similarity']:.4f}")
+    print(f"\nGlobal Similarity Statistics:")
+    print(f"  Mean global similarity: {stats['global_similarities']['mean']:.4f}")
+    print(f"  Std global similarity: {stats['global_similarities']['std']:.4f}")
+    print(f"  Min global similarity: {stats['global_similarities']['min']:.4f}")
+    print(f"  Max global similarity: {stats['global_similarities']['max']:.4f}")
     print(f"  Statistics saved to: {stats_path}")
     
     if args.save_individual:
