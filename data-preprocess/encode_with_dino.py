@@ -19,8 +19,11 @@ def load_dino_model(model_name: str = "facebook/dinov3-vitl16-pretrain-lvd1689m"
     """Load DINOv3 model and processor"""
     processor = AutoImageProcessor.from_pretrained(model_name)
     model = AutoModel.from_pretrained(model_name)
+    # Ensure model uses the correct dtype consistently
     if dtype == torch.float16:
         model = model.half()
+    else:
+        model = model.float()  # Explicitly set to float32
     model.to(device).eval()
     return model, processor
 
@@ -162,7 +165,7 @@ def main():
         return
 
     dtype = torch.float16 if args.device.startswith("cuda") or args.fp16 else torch.float32
-    model, processor = load_dino_model(args.model, device=args.device)
+    model, processor = load_dino_model(args.model, device=args.device, dtype=dtype)
     
     print(f"Using DINOv3 model: {args.model}")
     print(f"Model device: {next(model.parameters()).device}")
@@ -185,7 +188,7 @@ def main():
         rgb_pil, alpha_img = preprocess_rgba_opencv(str(img_path), size=args.size)
         
         # Encode using DINOv3
-        features = encode_image_dino(model, processor, rgb_pil, device=args.device).squeeze(0)  # (hidden_size, grid, grid)
+        features = encode_image_dino(model, processor, rgb_pil, device=args.device, dtype=dtype).squeeze(0)  # (hidden_size, grid, grid)
         h, w = features.shape[-2], features.shape[-1]
 
         # Save features

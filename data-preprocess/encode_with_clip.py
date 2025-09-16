@@ -18,8 +18,11 @@ def list_images(folder, exts=(".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", 
 def load_clip_model(model_name: str = "ViT-L/14", device="cuda", dtype=torch.float32):
     """Load CLIP model and return both model and preprocess function"""
     model, preprocess = clip.load(model_name, device=device)
+    # Ensure model uses the correct dtype consistently
     if dtype == torch.float16:
         model = model.half()
+    else:
+        model = model.float()  # Explicitly set to float32
     model.eval()
     return model, preprocess
 
