@@ -11,7 +11,6 @@ python encode_with_dino.py \
     --model facebook/dinov2-large \
     --size 224 \
     --device cuda \
-    --fp16 \
     --save_meta
 
 python encode_with_dino.py \
@@ -20,5 +19,4 @@ python encode_with_dino.py \
     --model facebook/dinov3-vitl16-pretrain-lvd1689m \
     --size 224 \
     --device cuda \
-    --fp16 \
     --save_meta

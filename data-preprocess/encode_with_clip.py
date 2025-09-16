@@ -15,9 +15,11 @@ def list_images(folder, exts=(".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", 
     p = Path(folder)
     return sorted([f for f in p.rglob("*") if f.suffix.lower() in exts])
 
-def load_clip_model(model_name: str = "ViT-L/14", device="cuda"):
+def load_clip_model(model_name: str = "ViT-L/14", device="cuda", dtype=torch.float32):
     """Load CLIP model and return both model and preprocess function"""
     model, preprocess = clip.load(model_name, device=device)
+    if dtype == torch.float16:
+        model = model.half()
     model.eval()
     return model, preprocess
 
@@ -112,10 +114,10 @@ def preprocess_rgba_opencv(image_path: str, size: int):
     return rgb_pil, alpha_img
 
 @torch.inference_mode()
-def encode_image_clip(model, preprocess, img_pil: Image.Image, device="cuda"):
+def encode_image_clip(model, preprocess, img_pil: Image.Image, device="cuda", dtype=torch.float32):
     """Encode image using CLIP ViT and return last layer feature maps"""
     # Preprocess image using CLIP's preprocessing
-    img_tensor = preprocess(img_pil).unsqueeze(0).to(device)  # (1, 3, 224, 224)
+    img_tensor = preprocess(img_pil).unsqueeze(0).to(device, dtype=dtype)  # (1, 3, 224, 224)
     
     # Get features from the visual encoder
     with torch.no_grad():
@@ -176,7 +178,7 @@ def main():
         return
 
     dtype = torch.float16 if args.device.startswith("cuda") or args.fp16 else torch.float32
-    model, preprocess = load_clip_model(args.model, device=args.device)
+    model, preprocess = load_clip_model(args.model, device=args.device, dtype=dtype)
     
     print(f"Using CLIP model: {args.model}")
     print(f"Model device: {next(model.parameters()).device}")
@@ -199,7 +201,7 @@ def main():
         rgb_pil, alpha_img = preprocess_rgba_opencv(str(img_path), size=args.size)
         
         # Encode using CLIP
-        features = encode_image_clip(model, preprocess, rgb_pil, device=args.device).squeeze(0)  # (hidden_dim, grid, grid)
+        features = encode_image_clip(model, preprocess, rgb_pil, device=args.device, dtype=dtype).squeeze(0)  # (hidden_dim, grid, grid)
         h, w = features.shape[-2], features.shape[-1]
 
         # Save features
