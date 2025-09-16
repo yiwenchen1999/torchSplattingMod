@@ -13,10 +13,10 @@ python encode_with_dino.py \
     --device cuda \
     --save_meta
 
-python encode_with_dino.py \
-    --input ../../nerf_synthetic/ship_latents_processed_test \
-    --output ../../nerf_synthetic/ship_latents_processed_test/dino_features_v3 \
-    --model facebook/dinov3-vitl16-pretrain-lvd1689m \
-    --size 224 \
-    --device cuda \
-    --save_meta
+# python encode_with_dino.py \
+#     --input ../../nerf_synthetic/ship_latents_processed_test \
+#     --output ../../nerf_synthetic/ship_latents_processed_test/dino_features_v3 \
+#     --model facebook/dinov3-vitl16-pretrain-lvd1689m \
+#     --size 224 \
+#     --device cuda \
+#     --save_meta
