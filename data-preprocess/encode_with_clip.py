@@ -117,46 +117,87 @@ def encode_image_clip(model, preprocess, img_pil: Image.Image, device="cuda", dt
     """Encode image using CLIP ViT and return last layer feature maps"""
     # Preprocess image using CLIP's preprocessing
     img_tensor = preprocess(img_pil).unsqueeze(0).to(device, dtype=dtype)  # (1, 3, 224, 224)
+    print(f'[DEBUG] Input img_tensor shape: {img_tensor.shape}, dtype: {img_tensor.dtype}')
     
     # Get features from the visual encoder
     with torch.no_grad():
         # Get the visual encoder directly
         visual_encoder = model.visual
+        print(f'[DEBUG] Visual encoder device: {next(visual_encoder.parameters()).device}')
+        print(f'[DEBUG] Visual encoder dtype: {next(visual_encoder.parameters()).dtype}')
+        
+        # Check conv1 layer specifically
+        conv1_weight_dtype = visual_encoder.conv1.weight.dtype
+        conv1_bias_dtype = visual_encoder.conv1.bias.dtype if visual_encoder.conv1.bias is not None else None
+        print(f'[DEBUG] Conv1 weight dtype: {conv1_weight_dtype}')
+        print(f'[DEBUG] Conv1 bias dtype: {conv1_bias_dtype}')
         
         # Forward through the visual encoder to get intermediate features
         # Convert input to match model's expected dtype
-        img_tensor = img_tensor.to(dtype=next(visual_encoder.parameters()).dtype)
+        model_dtype = next(visual_encoder.parameters()).dtype
+        print(f'[DEBUG] Converting input from {img_tensor.dtype} to {model_dtype}')
+        img_tensor = img_tensor.to(dtype=model_dtype)
+        print(f'[DEBUG] After conversion - img_tensor dtype: {img_tensor.dtype}')
         
+        print(f'[DEBUG] Starting forward pass through conv1...')
         x = visual_encoder.conv1(img_tensor)  # shape = [*, width, grid, grid]
+        print(f'[DEBUG] After conv1 - x shape: {x.shape}, dtype: {x.dtype}')
         x = x.reshape(x.shape[0], x.shape[1], -1)  # shape = [*, width, grid ** 2]
         x = x.permute(0, 2, 1)  # shape = [*, grid ** 2, width]
+        print(f'[DEBUG] After reshape and permute - x shape: {x.shape}, dtype: {x.dtype}')
         
         # Add class token
+        class_embedding_dtype = visual_encoder.class_embedding.dtype
+        print(f'[DEBUG] Class embedding dtype: {class_embedding_dtype}')
         x = torch.cat([visual_encoder.class_embedding.to(x.dtype) + torch.zeros(x.shape[0], 1, x.shape[-1], dtype=x.dtype, device=x.device), x], dim=1)  # shape = [*, grid ** 2 + 1, width]
+        print(f'[DEBUG] After adding class token - x shape: {x.shape}, dtype: {x.dtype}')
+        
+        # Add positional embedding
+        pos_embedding_dtype = visual_encoder.positional_embedding.dtype
+        print(f'[DEBUG] Positional embedding dtype: {pos_embedding_dtype}')
         x = x + visual_encoder.positional_embedding.to(x.dtype)
+        print(f'[DEBUG] After adding positional embedding - x shape: {x.shape}, dtype: {x.dtype}')
+        
+        # Layer norm pre
+        ln_pre_weight_dtype = visual_encoder.ln_pre.weight.dtype
+        ln_pre_bias_dtype = visual_encoder.ln_pre.bias.dtype
+        print(f'[DEBUG] LN_pre weight dtype: {ln_pre_weight_dtype}')
+        print(f'[DEBUG] LN_pre bias dtype: {ln_pre_bias_dtype}')
         x = visual_encoder.ln_pre(x)
+        print(f'[DEBUG] After ln_pre - x shape: {x.shape}, dtype: {x.dtype}')
         
         x = x.permute(1, 0, 2)  # NLD -> LND
+        print(f'[DEBUG] After permute to LND - x shape: {x.shape}, dtype: {x.dtype}')
+        
+        # Transformer layers
+        print(f'[DEBUG] Starting transformer forward pass...')
         x = visual_encoder.transformer(x)
+        print(f'[DEBUG] After transformer - x shape: {x.shape}, dtype: {x.dtype}')
+        
         x = x.permute(1, 0, 2)  # LND -> NLD
+        print(f'[DEBUG] After permute to NLD - x shape: {x.shape}, dtype: {x.dtype}')
         
         # Get the last layer features (before final layer norm and projection)
         last_layer_features = x  # shape = [batch_size, num_patches + 1, hidden_dim]
+        print(f'[DEBUG] Last layer features shape: {last_layer_features.shape}, dtype: {last_layer_features.dtype}')
         
         # Remove class token to get patch features only
         patch_features = last_layer_features[:, 1:, :]  # shape = [batch_size, num_patches, hidden_dim]
+        print(f'[DEBUG] Patch features shape: {patch_features.shape}, dtype: {patch_features.dtype}')
         
         # Reshape to spatial format
         # For ViT-L/14, the grid size is 16x16 (224/14 = 16)
         grid_size = int(np.sqrt(patch_features.shape[1]))
+        print(f'[DEBUG] Grid size: {grid_size}')
         spatial_features = patch_features.reshape(patch_features.shape[0], grid_size, grid_size, patch_features.shape[2])
         spatial_features = spatial_features.permute(0, 3, 1, 2)  # [batch, hidden_dim, grid, grid]
+        print(f'[DEBUG] Final spatial features shape: {spatial_features.shape}, dtype: {spatial_features.dtype}')
     
     print(f'CLIP feature maps shape: {spatial_features.shape}, dtype: {spatial_features.dtype}')
     return spatial_features  # (1, hidden_dim, grid, grid)
 
 def main():
-    parser = argparse.ArgumentParser(description="Encode images to CLIP ViT feature maps")
+    parser = argparse.ArgumentParser(description="Encode images to CLIP ViT patch-level feature maps")
     parser.add_argument("--input", required=True, help="Input images folder")
     parser.add_argument("--output", required=True, help="Output folder for .npy features")
     parser.add_argument("--model", default="ViT-L/14", help="CLIP model name (e.g., ViT-L/14, ViT-B/32)")
