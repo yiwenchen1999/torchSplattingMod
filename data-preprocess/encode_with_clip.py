@@ -215,11 +215,11 @@ def main():
         print(f"No images found in {args.input}")
         return
 
-    dtype = torch.float32 if args.device.startswith("cuda") or args.fp16 else torch.float32
+    dtype = torch.float32 if args.device.startswith("cuda") else torch.float32
     model, preprocess = load_clip_model(args.model, device=args.device, dtype=dtype)
     
     print(f"Using CLIP model: {args.model}")
-    print(f"Model device: {next(model.parameters()).device}")
+    print(f"Model device and dtype: {next(model.parameters()).device}, {next(model.parameters()).dtype}")
 
     for img_path in tqdm(images, desc="编码CLIP特征中"):
         rel = Path(img_path).relative_to(args.input)
