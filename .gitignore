@@ -14,3 +14,10 @@ __pycache__/
 # Results
 result/
 ship_latents_processed/
+
+# Output and checkpoint folders
+output/
+checkpoint/
+decoded_result/
+test_output/
+debug_output/

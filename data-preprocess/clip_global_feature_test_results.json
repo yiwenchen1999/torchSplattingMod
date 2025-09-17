@@ -1,0 +1,78 @@
+{
+  "model": "ViT-L/14",
+  "device": "cuda",
+  "num_tests": 10,
+  "all_tests_passed": false,
+  "results": [
+    {
+      "test_id": 1,
+      "max_diff": 0.0,
+      "mean_diff": 0.0,
+      "cosine_similarity": 0.99951171875,
+      "is_same": false
+    },
+    {
+      "test_id": 2,
+      "max_diff": 0.0,
+      "mean_diff": 0.0,
+      "cosine_similarity": 1.0,
+      "is_same": true
+    },
+    {
+      "test_id": 3,
+      "max_diff": 0.0,
+      "mean_diff": 0.0,
+      "cosine_similarity": 1.0,
+      "is_same": true
+    },
+    {
+      "test_id": 4,
+      "max_diff": 0.0,
+      "mean_diff": 0.0,
+      "cosine_similarity": 1.0009765625,
+      "is_same": true
+    },
+    {
+      "test_id": 5,
+      "max_diff": 0.0,
+      "mean_diff": 0.0,
+      "cosine_similarity": 1.0,
+      "is_same": true
+    },
+    {
+      "test_id": 6,
+      "max_diff": 0.0,
+      "mean_diff": 0.0,
+      "cosine_similarity": 0.99951171875,
+      "is_same": false
+    },
+    {
+      "test_id": 7,
+      "max_diff": 0.0,
+      "mean_diff": 0.0,
+      "cosine_similarity": 1.0,
+      "is_same": true
+    },
+    {
+      "test_id": 8,
+      "max_diff": 0.0,
+      "mean_diff": 0.0,
+      "cosine_similarity": 1.0,
+      "is_same": true
+    },
+    {
+      "test_id": 9,
+      "max_diff": 0.0,
+      "mean_diff": 0.0,
+      "cosine_similarity": 1.0009765625,
+      "is_same": true
+    },
+    {
+      "test_id": 10,
+      "max_diff": 0.0,
+      "mean_diff": 0.0,
+      "cosine_similarity": 1.0,
+      "is_same": true
+    }
+  ]
+}
