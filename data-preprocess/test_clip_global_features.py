@@ -62,16 +62,24 @@ def encode_image_clip_manual(model, preprocess, img_pil: Image.Image, device="cu
         
         # Extract global feature (class token)
         global_feature = last_layer_features[:, 0, :]  # shape = [batch_size, hidden_dim]
+
+        print(f"Global feature shape before ln_post: {global_feature.shape}")
         
         # Apply final layer norm and projection (like standard CLIP)
         global_feature = visual_encoder.ln_post(global_feature)
+
+        print(f"Global feature shape after ln_post: {global_feature.shape}")
         
         # Apply projection if it exists
         if hasattr(visual_encoder, 'proj'):
             global_feature = global_feature @ visual_encoder.proj
+
+        print(f"Global feature shape after proj: {global_feature.shape}")
         
         # Normalize
         global_feature = torch.nn.functional.normalize(global_feature, dim=-1)
+
+        print(f"Global feature shape after normalize: {global_feature.shape}")
     
     return global_feature
 

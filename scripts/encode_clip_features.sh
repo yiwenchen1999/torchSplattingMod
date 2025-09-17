@@ -7,8 +7,17 @@ cd ../data-preprocess
 
 python encode_with_clip.py \
     --input ../../nerf_synthetic/ship_latents_processed_test \
-    --output ../../nerf_synthetic/ship_latents_processed_test/clip_features \
+    --output ../../nerf_synthetic/ship_latents_processed_test/clip_features_raw \
     --model ViT-L/14 \
     --size 224 \
     --device cuda \
     --save_meta
+
+python encode_with_clip.py \
+    --input ../../nerf_synthetic/ship_latents_processed_test \
+    --output ../../nerf_synthetic/ship_latents_processed_test/clip_features_algined \
+    --model ViT-L/14 \
+    --size 224 \
+    --device cuda \
+    --save_meta \
+    --spatial_mode processed

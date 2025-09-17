@@ -113,8 +113,17 @@ def preprocess_rgba_opencv(image_path: str, size: int):
     return rgb_pil, alpha_img
 
 @torch.inference_mode()
-def encode_image_clip(model, preprocess, img_pil: Image.Image, device="cuda", dtype=torch.float32):
-    """Encode image using CLIP ViT and return last layer feature maps"""
+def encode_image_clip(model, preprocess, img_pil: Image.Image, device="cuda", dtype=torch.float32, spatial_mode="raw"):
+    """Encode image using CLIP ViT and return last layer feature maps
+    
+    Args:
+        model: CLIP model
+        preprocess: CLIP preprocessing function
+        img_pil: PIL Image
+        device: Device to run on
+        dtype: Data type
+        spatial_mode: "raw" for original features, "processed" for ln_post+proj+normalize
+    """
     # Preprocess image using CLIP's preprocessing
     img_tensor = preprocess(img_pil).unsqueeze(0).to(device, dtype=dtype)  # (1, 3, 224, 224)
     
@@ -155,6 +164,18 @@ def encode_image_clip(model, preprocess, img_pil: Image.Image, device="cuda", dt
         # Remove class token to get patch features only
         patch_features = last_layer_features[:, 1:, :]  # shape = [batch_size, num_patches, hidden_dim]
         
+        if spatial_mode == "processed":
+            # Apply the same post-processing as global features: ln_post, proj, normalize
+            # Apply layer norm post
+            patch_features = visual_encoder.ln_post(patch_features)
+            
+            # Apply projection if it exists
+            if hasattr(visual_encoder, 'proj'):
+                patch_features = patch_features @ visual_encoder.proj
+            
+            # Normalize each patch feature
+            patch_features = torch.nn.functional.normalize(patch_features, dim=-1)
+        
         # Reshape to spatial format
         # For ViT-L/14, the grid size is 16x16 (224/14 = 16)
         grid_size = int(np.sqrt(patch_features.shape[1]))
@@ -173,6 +194,8 @@ def main():
     parser.add_argument("--fp16", action="store_true", help="Force float16 inference/storage")
     parser.add_argument("--overwrite", action="store_true", help="Overwrite existing files")
     parser.add_argument("--save_meta", action="store_true", help="Save metadata JSON file")
+    parser.add_argument("--spatial_mode", choices=["raw", "processed"], default="raw", 
+                       help="Spatial feature processing mode: 'raw' for original features, 'processed' for ln_post+proj+normalize")
     args = parser.parse_args()
 
     os.makedirs(args.output, exist_ok=True)
@@ -206,7 +229,7 @@ def main():
         rgb_pil, alpha_img = preprocess_rgba_opencv(str(img_path), size=args.size)
         
         # Encode using CLIP
-        features = encode_image_clip(model, preprocess, rgb_pil, device=args.device, dtype=dtype).squeeze(0)  # (hidden_dim, grid, grid)
+        features = encode_image_clip(model, preprocess, rgb_pil, device=args.device, dtype=dtype, spatial_mode=args.spatial_mode).squeeze(0)  # (hidden_dim, grid, grid)
         h, w = features.shape[-2], features.shape[-1]
 
         # Save features
@@ -230,15 +253,16 @@ def main():
                 "mask_shape": [h, w],
                 "dtype": "float16" if dtype == torch.float16 else "float32",
                 "model": args.model,
-                "feature_type": "clip_vit_last_layer",
+                "feature_type": f"clip_vit_last_layer_{args.spatial_mode}",
                 "preprocessing": "opencv_alpha_multiplication",
                 "grid_size": h,
                 "hidden_dim": features.shape[0],
+                "spatial_mode": args.spatial_mode,
             }
             with open(out_base.with_suffix(".json"), "w") as f:
                 json.dump(meta, f, indent=2)
 
-    print(f"Done. Saved CLIP features and *_mask.npy to: {args.output}")
+    print(f"Done. Saved CLIP features (mode: {args.spatial_mode}) and *_mask.npy to: {args.output}")
 
 if __name__ == "__main__":
     main()
