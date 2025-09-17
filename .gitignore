@@ -21,3 +21,10 @@ checkpoint/
 decoded_result/
 test_output/
 debug_output/
+
+# Submodule build artifacts and cache files
+submodules/*/build/
+submodules/*/*.egg-info/
+submodules/*/__pycache__/
+submodules/*/dist/
+submodules/*/.pytest_cache/
