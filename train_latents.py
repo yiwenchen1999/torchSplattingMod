@@ -154,7 +154,6 @@ class GSSTrainer(Trainer):
             gt = latent
         else:
             gt = rgb
-        print('out render shape', out['render'].shape, 'gt shape', gt.shape)
         l1_loss = loss_utils.l1_loss(out['render'], gt)
 
         #^ total_loss = (1-self.lambda_dssim) * l1_loss + self.lambda_dssim * ssim_loss + depth_loss * self.lambda_depth
