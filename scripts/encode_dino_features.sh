@@ -5,13 +5,30 @@
 
 cd ../data-preprocess
 
+# python encode_with_dino.py \
+#     --input ../../nerf_synthetic/ship_latents_processed_test \
+#     --output ../../nerf_synthetic/ship_latents_processed_test/dino_features_v2_16 \
+#     --model facebook/dinov2-large \
+#     --size 224 \
+#     --device cuda \
+#     --save_meta
+
 python encode_with_dino.py \
     --input ../../nerf_synthetic/ship_latents_processed_test \
-    --output ../../nerf_synthetic/ship_latents_processed_test/dino_features_v2_224 \
+    --output ../../nerf_synthetic/ship_latents_processed_test/dino_features_v2_32 \
     --model facebook/dinov2-large \
-    --size 224 \
+    --size 448 \
     --device cuda \
     --save_meta
+
+python encode_with_dino.py \
+    --input ../../nerf_synthetic/ship_latents_processed_test \
+    --output ../../nerf_synthetic/ship_latents_processed_test/dino_features_v2_64 \
+    --model facebook/dinov2-large \
+    --size 896 \
+    --device cuda \
+    --save_meta
+
 
 # python encode_with_dino.py \
 #     --input ../../nerf_synthetic/ship_latents_processed_test \

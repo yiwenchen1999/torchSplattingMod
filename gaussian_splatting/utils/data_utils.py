@@ -86,12 +86,23 @@ def read_camera(folder):
         intrinsics.append(np.array(item['intrinsic']))
     return rgb_files, poses, intrinsics, max_depth
 
-def read_all(folder, resize_factor=1., latent_model=False, image_size=128):
+def read_all(folder, resize_factor=1., latent_model=False, image_size=128, latent_folder=None):
     """
     read source images from a folder
+    
+    Args:
+        folder: 主数据文件夹路径
+        resize_factor: 图像缩放因子
+        latent_model: 是否使用潜在模型
+        image_size: 图像尺寸
+        latent_folder: 潜在文件文件夹路径，如果为None则使用默认路径
     """
     # scene_src_dir = os.path.join(self.folder_path_src, scene_id)
     print('reading folder', folder)
+    if latent_folder is not None:
+        print('using latent folder', latent_folder)
+    else:
+        print('using default latent folder', os.path.join(folder, f'flux_latents_{image_size}'))
     src_rgb_files, src_poses, src_intrinsics, max_depth = read_camera(folder)
 
     src_cameras = []
@@ -105,7 +116,11 @@ def read_all(folder, resize_factor=1., latent_model=False, image_size=128):
         read_image(src_rgb_file, src_pose, 
             intrinsic, max_depth=max_depth, resize_factor=resize_factor)
         file_name = src_rgb_file.split('/')[-1]
-        latent_file = os.path.join(folder, f'flux_latents_{image_size}', file_name.replace('png','npy'))
+        # 如果指定了潜在文件夹，使用指定的路径；否则使用默认路径
+        if latent_folder is not None:
+            latent_file = os.path.join(folder, f'{latent_folder}_{image_size}', file_name.replace('png','npy'))
+        else:
+            latent_file = os.path.join(folder, f'flux_latents_{image_size}', file_name.replace('png','npy'))
         # latent_file = latent_file.replace('png','npy')
         if latent_model:
             src_latent = torch.from_numpy(np.load(latent_file))

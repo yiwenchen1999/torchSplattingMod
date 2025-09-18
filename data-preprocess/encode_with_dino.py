@@ -114,10 +114,18 @@ def preprocess_rgba_opencv(image_path: str, size: int):
     return rgb_pil, alpha_img
 
 @torch.inference_mode()
-def encode_image_dino(model, processor, img_pil: Image.Image, device="cuda", dtype=torch.float32):
+def encode_image_dino(model, processor, img_pil: Image.Image, device="cuda", dtype=torch.float32, size=224):
     """Encode image using DINOv3 and return feature maps"""
     # Preprocess image using DINO's processor
-    inputs = processor(images=img_pil, return_tensors="pt")
+    print('img_pil shape', img_pil.size)
+    inputs = processor(
+        images=img_pil,
+        return_tensors="pt",
+        do_resize=True,
+        size={"height": size, "width": size},
+        do_center_crop=False
+    )
+    print('inputs shape', inputs.pixel_values.shape)
     # Convert input to match model's expected dtype
     pixel_values = inputs.pixel_values.to(device, dtype=next(model.parameters()).dtype)  # (1, 3, 224, 224)
     
@@ -185,7 +193,7 @@ def main():
         rgb_pil, alpha_img = preprocess_rgba_opencv(str(img_path), size=args.size)
         
         # Encode using DINOv3
-        features = encode_image_dino(model, processor, rgb_pil, device=args.device, dtype=dtype).squeeze(0)  # (hidden_size, grid, grid)
+        features = encode_image_dino(model, processor, rgb_pil, device=args.device, dtype=dtype, size=args.size).squeeze(0)  # (hidden_size, grid, grid)
         h, w = features.shape[-2], features.shape[-1]
 
         # Save features

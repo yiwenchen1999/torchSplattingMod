@@ -154,6 +154,7 @@ class GSSTrainer(Trainer):
             gt = latent
         else:
             gt = rgb
+        print('out render shape', out['render'].shape, 'gt shape', gt.shape)
         l1_loss = loss_utils.l1_loss(out['render'], gt)
 
         #^ total_loss = (1-self.lambda_dssim) * l1_loss + self.lambda_dssim * ssim_loss + depth_loss * self.lambda_depth
@@ -273,6 +274,8 @@ if __name__ == "__main__":
                         help='specify what folder to use')
     parser.add_argument('--feature_dim', type=int, default=4,
                        help='Feature dimension for training')
+    parser.add_argument('--latent_folder', type=str, default=None,
+                       help='Path to latent files folder (if not specified, uses default flux_latents_{image_size} subfolder)')
     
     args = parser.parse_args()
     
@@ -291,7 +294,8 @@ if __name__ == "__main__":
     # folder = 'B075X65R3X'
     # scene_name = 'chair_rgb'
     latent_model = True
-    data = read_all(folder, resize_factor=4*image_size/512.0, latent_model=latent_model, image_size=image_size)
+    data = read_all(folder, resize_factor=image_size/512.0, latent_model=latent_model, 
+                   image_size=image_size, latent_folder=args.latent_folder)
     data = {k: v.to(device) for k, v in data.items()}
     data['depth_range'] = torch.Tensor([[1,3]]*len(data['rgb'])).to(device)
 

@@ -232,6 +232,14 @@ def main():
         features = encode_image_clip(model, preprocess, rgb_pil, device=args.device, dtype=dtype, spatial_mode=args.spatial_mode).squeeze(0)  # (hidden_dim, grid, grid)
         h, w = features.shape[-2], features.shape[-1]
 
+        # If args.size is not 224, interpolate the latent map to K times bigger resolution
+        if args.size != 224:
+            K = args.size / 224
+            new_h, new_w = int(h * K), int(w * K)
+            # Interpolate features to the new resolution
+            features = F.interpolate(features.unsqueeze(0), size=(new_h, new_w), mode='bilinear', align_corners=False).squeeze(0)
+            h, w = new_h, new_w
+
         # Save features
         feat_cpu = features.to("cpu")
         np.save(out_features, feat_cpu.numpy())
@@ -258,6 +266,8 @@ def main():
                 "grid_size": h,
                 "hidden_dim": features.shape[0],
                 "spatial_mode": args.spatial_mode,
+                "interpolated": args.size != 224,
+                "interpolation_factor": args.size / 224 if args.size != 224 else 1.0,
             }
             with open(out_base.with_suffix(".json"), "w") as f:
                 json.dump(meta, f, indent=2)
