@@ -26,42 +26,102 @@ def calculate_intrinsic_matrix(fov_degrees, image_width, image_height):
     ]
     return intrinsic
 
-def create_alpha_mask_from_rgb(rgb_path):
+def blend_rgba_image(image_path):
     """
-    Create alpha mask from RGB image by thresholding
+    Process RGBA image and create blended RGB image with alpha multiplication
+    Similar to blend_rgba_images.py functionality
+    Returns: (success, message, alpha_mask, blended_rgb_path)
     """
     try:
-        # Load image
-        img = cv2.imread(rgb_path, cv2.IMREAD_COLOR)
-        if img is None:
+        # Load with OpenCV
+        img_bgr = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+        if img_bgr is None:
             # Try with PIL as fallback
-            pil_img = Image.open(rgb_path)
-            img = np.array(pil_img)
-            if len(img.shape) == 3:
-                img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+            pil_img = Image.open(image_path)
+            img_bgr = np.array(pil_img)
+            if len(img_bgr.shape) == 3 and img_bgr.shape[2] == 3:
+                img_bgr = cv2.cvtColor(img_bgr, cv2.COLOR_RGB2BGR)
+            elif len(img_bgr.shape) == 3 and img_bgr.shape[2] == 4:
+                img_bgr = cv2.cvtColor(img_bgr, cv2.COLOR_RGBA2BGRA)
         
-        # Convert to grayscale
-        if len(img.shape) == 3:
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        else:
-            gray = img
+        alpha_mask = None
+        
+        # Check if image has alpha channel
+        if len(img_bgr.shape) == 3 and img_bgr.shape[2] == 4:
+            # Image has alpha channel (BGRA)
+            b, g, r, a = cv2.split(img_bgr)
             
-        # Create alpha mask by thresholding
-        # Assuming background is dark/black
-        _, alpha = cv2.threshold(gray, 10, 255, cv2.THRESH_BINARY)
-        
-        # Normalize to 0-1
-        alpha = alpha.astype(np.float32) / 255.0
-        
-        return alpha
-    except Exception as e:
-        print(f"Error creating alpha mask for {rgb_path}: {e}")
-        # Return all ones as fallback
-        if os.path.exists(rgb_path):
-            img = Image.open(rgb_path)
-            return np.ones(img.size[::-1], dtype=np.float32)  # PIL size is (w,h), we need (h,w)
+            # Store alpha mask
+            alpha_mask = a.astype(np.float32) / 255.0
+            
+            # Convert to float32 for processing
+            r_float = r.astype(np.float32) / 255.0
+            g_float = g.astype(np.float32) / 255.0
+            b_float = b.astype(np.float32) / 255.0
+            a_float = a.astype(np.float32) / 255.0
+            
+            # Multiply RGB with alpha values and blend with white background
+            # Formula: blended = alpha * foreground + (1 - alpha) * background
+            # For white background (255, 255, 255):
+            r_blended = (r_float * a_float + (1.0 - a_float)) * 255
+            g_blended = (g_float * a_float + (1.0 - a_float)) * 255
+            b_blended = (b_float * a_float + (1.0 - a_float)) * 255
+            
+            # Create blended RGB image (cv2.split gives B,G,R,A, so we need to reorder to RGB)
+            rgb_blended = np.stack([r_blended.astype(np.uint8), g_blended.astype(np.uint8), b_blended.astype(np.uint8)], axis=2)
+            
+            return True, "RGBA -> RGB blended", alpha_mask, rgb_blended
+            
+        elif len(img_bgr.shape) == 3 and img_bgr.shape[2] == 3:
+            # Image has no alpha channel (BGR)
+            # Convert BGR to RGB
+            rgb_image = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+            
+            # Create alpha mask from RGB by thresholding (original logic)
+            gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+            _, alpha = cv2.threshold(gray, 10, 255, cv2.THRESH_BINARY)
+            alpha_mask = alpha.astype(np.float32) / 255.0
+            
+            return True, "BGR -> RGB (created alpha)", alpha_mask, rgb_image
+            
         else:
-            return np.ones((512, 512), dtype=np.float32)
+            # Grayscale image
+            # Convert grayscale to RGB
+            rgb_image = cv2.cvtColor(img_bgr, cv2.COLOR_GRAY2RGB)
+            
+            # Create alpha mask from grayscale
+            _, alpha = cv2.threshold(img_bgr, 10, 255, cv2.THRESH_BINARY)
+            alpha_mask = alpha.astype(np.float32) / 255.0
+            
+            return True, "Grayscale -> RGB (created alpha)", alpha_mask, rgb_image
+            
+    except Exception as e:
+        print(f"Error processing image {image_path}: {e}")
+        # Return fallback
+        if os.path.exists(image_path):
+            try:
+                img = Image.open(image_path)
+                alpha_mask = np.ones(img.size[::-1], dtype=np.float32)  # PIL size is (w,h), we need (h,w)
+                rgb_image = np.array(img)
+                if len(rgb_image.shape) == 3:
+                    rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2RGB)
+                else:
+                    rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_GRAY2RGB)
+                return True, "Fallback processing", alpha_mask, rgb_image
+            except:
+                pass
+        
+        # Ultimate fallback
+        alpha_mask = np.ones((512, 512), dtype=np.float32)
+        rgb_image = np.zeros((512, 512, 3), dtype=np.uint8)
+        return False, f"Error: {e}", alpha_mask, rgb_image
+
+def create_alpha_mask_from_rgb(rgb_path):
+    """
+    Create alpha mask from RGB image by thresholding (legacy function for compatibility)
+    """
+    success, message, alpha_mask, _ = blend_rgba_image(rgb_path)
+    return alpha_mask
 
 def process_bus_dataset(data_dir, split, output_dir):
     """
@@ -161,14 +221,31 @@ def process_bus_dataset(data_dir, split, output_dir):
             print(f"Warning: RGB file not found: {rgb_path}")
             continue
         
-        # Create alpha mask
+        # Process image with RGBA blending
         alpha_filename = rgb_filename.replace('.png', '_alpha.png')
         alpha_path = output_path / alpha_filename
         
-        # Generate alpha mask
-        alpha_mask = create_alpha_mask_from_rgb(str(rgb_path))
-        alpha_img = Image.fromarray((alpha_mask * 255).astype(np.uint8))
-        alpha_img.save(alpha_path)
+        # Use the new blending function
+        success, message, alpha_mask, blended_rgb = blend_rgba_image(str(rgb_path))
+        
+        if success:
+            print(f"  ✓ {rgb_filename}: {message}")
+            
+            # Save alpha mask
+            alpha_img = Image.fromarray((alpha_mask * 255).astype(np.uint8))
+            alpha_img.save(alpha_path)
+            
+            # Save blended RGB image (overwrite the original RGB file)
+            blended_rgb_pil = Image.fromarray(blended_rgb)
+            dst_rgb_path = output_path / rgb_filename
+            blended_rgb_pil.save(dst_rgb_path)
+            
+        else:
+            print(f"  ⚠ Warning: Failed to process {rgb_filename}: {message}")
+            # Fallback to original method
+            alpha_mask = create_alpha_mask_from_rgb(str(rgb_path))
+            alpha_img = Image.fromarray((alpha_mask * 255).astype(np.uint8))
+            alpha_img.save(alpha_path)
         
         # Create image entry
         image_entry = {
@@ -213,11 +290,7 @@ def process_bus_dataset(data_dir, split, output_dir):
             print(f"  ⚠ Created black depth placeholder: {depth_filename}")
             placeholders_created += 1
         
-        # Copy RGB file to output directory
-        dst_rgb_path = output_path / rgb_filename
-        import shutil
-        shutil.copy2(rgb_path, dst_rgb_path)
-        
+        # RGB file is already saved during blending process above
         images.append(image_entry)
     
     return images

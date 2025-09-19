@@ -181,7 +181,7 @@ class GaussRenderer(nn.Module):
         self.render_depth = torch.zeros(*self.pix_coord.shape[:2], 1).to('cuda')
         self.render_alpha = torch.zeros(*self.pix_coord.shape[:2], 1).to('cuda')
 
-        TILE_SIZE = min(16, camera.image_width, camera.image_height)
+        TILE_SIZE = min(64, camera.image_width, camera.image_height)
         for h in range(0, camera.image_height, TILE_SIZE):
             for w in range(0, camera.image_width, TILE_SIZE):
                 # check if the rectangle penetrate the tile

@@ -12,8 +12,18 @@ from diffusers import AutoencoderKL
 import cv2
 
 def list_images(folder, exts=(".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff")):
+    """List all image files in folder, excluding depth and alpha images"""
     p = Path(folder)
-    return sorted([f for f in p.rglob("*") if f.suffix.lower() in exts])
+    all_images = [f for f in p.rglob("*") if f.suffix.lower() in exts]
+    
+    # Filter out images with "depth" or "alpha" in their names
+    filtered_images = []
+    for img in all_images:
+        img_name_lower = img.name.lower()
+        if "depth" not in img_name_lower and "alpha" not in img_name_lower:
+            filtered_images.append(img)
+    
+    return sorted(filtered_images)
 
 def load_flux_vae(flux_repo: str = "black-forest-labs/FLUX.1-dev", device="cuda", dtype=torch.float16):
     """Load FLUX VAE model"""
@@ -123,7 +133,6 @@ def encode_image_flux(vae: AutoencoderKL, img_tensor: torch.Tensor, sample: bool
     
     # FLUX VAE scaling: (latents - shift_factor) * scaling_factor
     latents = (latents - vae.config.shift_factor) * vae.config.scaling_factor
-    print('latents', latents.shape, latents.dtype)
     
     return latents  # (1,4,H/8,W/8)
 
@@ -141,21 +150,42 @@ def main():
     args = parser.parse_args()
 
     os.makedirs(args.output, exist_ok=True)
-    images = list_images(args.input)
+    all_images = list_images(args.input)
     # 只处理不在任何子文件夹中的图像
-    images = [img for img in images if img.parent == Path(args.input)]
+    all_images = [img for img in all_images if img.parent == Path(args.input)]
+    
+    # Separate RGB images from depth/alpha images for logging
+    rgb_images = []
+    skipped_images = []
+    
+    for img in all_images:
+        img_name_lower = img.name.lower()
+        if "depth" in img_name_lower or "alpha" in img_name_lower:
+            skipped_images.append(img)
+        else:
+            rgb_images.append(img)
+    
+    images = rgb_images
+    
+    print(f"Found {len(all_images)} total images:")
+    print(f"  - RGB images to process: {len(images)}")
+    print(f"  - Depth/Alpha images skipped: {len(skipped_images)}")
+    
+    if skipped_images:
+        print("Skipped images:")
+        for img in skipped_images[:5]:  # Show first 5 skipped images
+            print(f"  - {img.name}")
+        if len(skipped_images) > 5:
+            print(f"  ... and {len(skipped_images) - 5} more")
+    
     if not images:
-        print(f"No images found in {args.input}")
+        print(f"No RGB images found in {args.input}")
         return
 
     dtype = torch.float16 if args.device.startswith("cuda") or args.fp16 else torch.float32
     vae = load_flux_vae(args.flux, device=args.device, dtype=dtype)
     
-    print(f"Using FLUX VAE: {args.flux}")
-    print(f"Scaling factor: {vae.config.scaling_factor}")
-    print(f"Shift factor: {vae.config.shift_factor}")
-
-    for img_path in tqdm(images, desc="编码中"):
+    for img_path in tqdm(images, desc="Encoding RGB images with FLUX"):
         rel = Path(img_path).relative_to(args.input)
         out_base = Path(args.output) / rel
         out_base.parent.mkdir(parents=True, exist_ok=True)
@@ -179,7 +209,6 @@ def main():
 
         # Save latent
         lat_cpu = latents.to("cpu")
-        print(f'Latent shape: {lat_cpu.shape}, dtype: {lat_cpu.dtype}')
         np.save(out_latent, lat_cpu.half().numpy() if dtype == torch.float16 else lat_cpu.numpy())
 
         # # Downscale alpha channel to latent resolution and save
