@@ -1,19 +1,16 @@
 #!/bin/bash
+#SBATCH --partition=short
+#SBATCH --nodes=1
+#SBATCH --time=8:00:00
+#SBATCH --job-name=process_objaverse
+#SBATCH --mem=32
+#SBATCH --ntasks=8
+#SBATCH --output=myjob.process_objaverse.out
+#SBATCH --error=myjob.process_objaverse.err
 
-# Example script to run Objaverse processing
-# Modify parameters as needed
-
-echo "Starting Objaverse data processing..."
-
-# Option 1: Dry run to see what would be processed
-echo "=== DRY RUN ==="
-python process_all_objaverse.py --dry_run --max_objects 5
-
-echo ""
-echo "=== ACTUAL PROCESSING ==="
 
 # Option 2: Process first 10 objects (for testing)
-python process_all_objaverse.py --max_objects 10
+python process_all_objaverse.py
 
 # Option 3: Process all objects (uncomment when ready)
 # python scripts/process_all_objaverse.py
